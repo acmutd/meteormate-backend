@@ -205,3 +205,10 @@ cython_debug/
 marimo/_static/
 marimo/_lsp/
 __marimo__/
+
+# Firebase & other misc
+firebase-key.json
+.DS_Store
+*.log
+alembic/versions/*.py
+!alembic/versions/
