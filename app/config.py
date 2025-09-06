@@ -11,8 +11,7 @@ class Settings:
     FIREBASE_CREDENTIALS_PATH: str = config(
         "FIREBASE_CREDENTIALS_PATH", default="firebase-key.json"
     )
-    ALLOWED_ORIGINS: List[str] = config("ALLOWED_ORIGINS",
-                                        default="http://localhost:3000").split(",")
+    ALLOWED_ORIGINS: List[str] = ["*"]  # todo - change this to meteormate.com when site is live
     DEBUG: bool = config("DEBUG", default=False, cast=bool)
 
     # ai service config
