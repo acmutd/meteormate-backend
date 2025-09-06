@@ -5,7 +5,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.config import settings
 from app.database import engine, Base
-from app.api import auth, users, survey, matches
+from app.api import auth, survey, matches
 
 # create tables
 Base.metadata.create_all(bind=engine)
@@ -22,7 +22,6 @@ app.add_middleware(
 
 # routes
 app.include_router(auth.router, prefix="/api/auth", tags=["auth"])
-app.include_router(users.router, prefix="/api/users", tags=["users"])
 app.include_router(survey.router, prefix="/api/survey", tags=["survey"])
 app.include_router(matches.router, prefix="/api/matches", tags=["matches"])
 

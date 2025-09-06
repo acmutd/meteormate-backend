@@ -99,17 +99,17 @@ class MatchingService:
         return 0
 
     def _has_deal_breaker_conflict(self, survey1: Survey, survey2: Survey) -> bool:
-        # implement deal breaker logic
+        # todo - implement deal breaker logic
         return False
 
     async def like_user(self, user_id: str, target_user_id: str) -> Dict:
-        # implementation for liking a user
+        # todo - implementation for liking a user
         return {"status": "liked"}
 
     async def pass_user(self, user_id: str, target_user_id: str) -> Dict:
-        # implementation for passing a user
+        # todo - implementation for passing a user
         return {"status": "passed"}
 
     async def get_mutual_matches(self, user_id: str) -> List[Dict]:
-        # implementation for getting mutual matches
+        # todo - implementation for getting mutual matches
         return []
