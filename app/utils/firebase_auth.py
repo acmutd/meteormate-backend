@@ -37,3 +37,5 @@ async def get_firebase_user(uid: str):
         raise HTTPException(status_code=404, detail="Firebase user not found")
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error fetching Firebase user: {str(e)}")
+
+

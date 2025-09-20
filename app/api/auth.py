@@ -16,8 +16,8 @@ router = APIRouter()
 
 @router.post("/register", response_model=UserResponse)
 async def register_user(
-    user_data: UserCreate,
-    db: Session = Depends(get_db),
+        user_data: UserCreate,
+        db: Session = Depends(get_db),
 ):
     # check if net id is already taken
     existing_utd_user = db.query(User).filter(User.utd_id == user_data.utd_id).first()
@@ -36,7 +36,7 @@ async def register_user(
             password=user_data.password,
             email_verified=False
         )
-        
+
         # create user in db
         new_user = User(
             id=firebase_user.uid,
@@ -50,9 +50,9 @@ async def register_user(
         db.add(new_user)
         db.commit()
         db.refresh(new_user)
-        
+
         return new_user
-        
+
     except auth.EmailAlreadyExistsError:
         raise HTTPException(status_code=400, detail="Account already exists")
     except Exception as e:
@@ -68,8 +68,8 @@ async def register_user(
 
 @router.get("/me", response_model=UserResponse)
 async def get_current_user_profile(
-    current_user_token=Depends(get_current_user),
-    db: Session = Depends(get_db),
+        current_user_token=Depends(get_current_user),
+        db: Session = Depends(get_db),
 ):
     uid = current_user_token.get("uid")
     user = db.query(User).filter(User.id == uid).first()
