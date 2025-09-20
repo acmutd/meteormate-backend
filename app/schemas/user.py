@@ -1,17 +1,24 @@
 # Created by Ryan Polasky | 7/12/25
 # ACM MeteorMate | All Rights Reserved
 
-from pydantic import BaseModel, EmailStr
-from typing import Optional
-from datetime import datetime
+from typing import Optional, Literal
+from datetime import date, datetime
+from pydantic import BaseModel
+
+HousingIntent = Literal["on", "off", "both"]
 
 
 class UserCreate(BaseModel):
     username: str
     first_name: str
     last_name: str
-    age: int
+    birthdate: Optional[date] = None
+    housing_intent: HousingIntent = "both"
     bio: Optional[str] = None
+    profile_picture_url: Optional[str] = None
+
+    class Config:
+        from_attributes = True
 
 
 class UserResponse(BaseModel):
@@ -19,10 +26,13 @@ class UserResponse(BaseModel):
     username: str
     first_name: str
     last_name: str
-    age: int
-    bio: Optional[str]
-    profile_picture_url: Optional[str]
+    age: Optional[int] = None
+    birthdate: Optional[date] = None
+    housing_intent: HousingIntent = "both"
+    bio: Optional[str] = None
+    profile_picture_url: Optional[str] = None
     created_at: datetime
 
     class Config:
         from_attributes = True
+        
