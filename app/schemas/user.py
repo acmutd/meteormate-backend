@@ -3,24 +3,31 @@
 
 from typing import Optional, Literal
 from datetime import date, datetime
-from pydantic import BaseModel
+from pydantic import BaseModel, validator
 
 HousingIntent = Literal["on", "off", "both"]
 
 
 class UserCreate(BaseModel):
-    utd_id: str
     email: str
+    password: str
+    utd_id: str
     first_name: str
     last_name: str
     birthdate: Optional[date] = None
+
+    @validator('email')
+    def validate_utd_email(cls, v):
+        if not v.endswith('@utdallas.edu'):
+            raise ValueError('Email must be a valid @utdallas.edu address')
+        return v
 
     class Config:
         from_attributes = True
 
 
 class UserResponse(BaseModel):
-    firebase_uid: str
+    id: str
     utd_id: str
     email: str
     first_name: str
