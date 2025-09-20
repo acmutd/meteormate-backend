@@ -2,6 +2,7 @@
 # ACM MeteorMate | All Rights Reserved
 
 from sqlalchemy import Column, String, Boolean, DateTime, Text, ForeignKey, func
+from sqlalchemy.dialects import postgresql
 from sqlalchemy.dialects.postgresql import ENUM as PGEnum
 from sqlalchemy.ext.hybrid import hybrid_property
 from app.database import Base
@@ -18,13 +19,19 @@ CLASS_YEAR_ENUM = PGEnum(
     create_type=True
 )
 
+HOUSING_INTENT = postgresql.ENUM(
+    'on', 'off', 'both',
+    name='housing_intent_enum',
+    create_type=True
+)
+
 
 class UserProfile(Base):
     __tablename__ = "user_profiles"
 
     user_id = Column(
         String,
-        ForeignKey("users.firebase_uid", ondelete="CASCADE"),
+        ForeignKey("users.id", ondelete="CASCADE"),
         primary_key=True,
         index=True
     )
@@ -32,8 +39,12 @@ class UserProfile(Base):
     gender = Column(GENDER_ENUM)
     major = Column(Text)
     class_year = Column(CLASS_YEAR_ENUM)
+    housing_intent = Column(HOUSING_INTENT, nullable=False, server_default='both')
     llc = Column(Boolean)
+    bio = Column(Text)
+    profile_picture_url = Column(String)
 
+    # behind-the-scenes stuff
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
 

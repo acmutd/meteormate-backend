@@ -1,6 +1,6 @@
 # Created by Ryan Polasky | 7/12/25
 # ACM MeteorMate | All Rights Reserved
-
+import uvicorn
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.config import settings
@@ -28,9 +28,12 @@ app.include_router(matches.router, prefix="/api/matches", tags=["matches"])
 
 @app.get("/")
 async def root():
-    return {"message": "meteormate backend is in goblin mode"}
+    return {"message": "MeteorMate backend is online!"}
 
 
 @app.get("/health")
 async def health_check():
-    return {"status": "goated"}
+    return {"status": "Online"}
+
+if __name__ == "__main__":
+    uvicorn.run(app, host="0.0.0.0", port=8000)

@@ -18,12 +18,12 @@ async def get_potential_matches(
     limit: int = 10, current_user_token=Depends(get_current_user), db: Session = Depends(get_db)
 ):
     # check if user has completed survey
-    user_survey = db.query(Survey).filter(Survey.user_id == current_user_token["uid"]).first()
+    user_survey = db.query(Survey).filter(Survey.user_id == current_user_token["id"]).first()
     if not user_survey:
-        raise HTTPException(status_code=400, detail="complete your survey first")
+        raise HTTPException(status_code=400, detail="Complete your survey first")
 
     matching_service = MatchingService(db)
-    matches = await matching_service.find_potential_matches(current_user_token["uid"], limit)
+    matches = await matching_service.find_potential_matches(current_user_token["id"], limit)
 
     return {"matches": matches}
 
@@ -35,7 +35,7 @@ async def like_user(
     db: Session = Depends(get_db)
 ):
     matching_service = MatchingService(db)
-    result = await matching_service.like_user(current_user_token["uid"], target_user_id)
+    result = await matching_service.like_user(current_user_token["id"], target_user_id)
 
     return result
 
@@ -47,7 +47,7 @@ async def pass_user(
     db: Session = Depends(get_db)
 ):
     matching_service = MatchingService(db)
-    result = await matching_service.pass_user(current_user_token["uid"], target_user_id)
+    result = await matching_service.pass_user(current_user_token["id"], target_user_id)
 
     return result
 
@@ -57,6 +57,6 @@ async def get_mutual_matches(
     current_user_token=Depends(get_current_user), db: Session = Depends(get_db)
 ):
     matching_service = MatchingService(db)
-    matches = await matching_service.get_mutual_matches(current_user_token["uid"])
+    matches = await matching_service.get_mutual_matches(current_user_token["id"])
 
     return {"matches": matches}

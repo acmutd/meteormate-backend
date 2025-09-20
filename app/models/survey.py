@@ -11,7 +11,7 @@ class Survey(Base):  # todo - make these relevant to whatever we end up asking i
     __tablename__ = "surveys"
 
     id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(String, ForeignKey("users.firebase_uid"))
+    user_id = Column(String, ForeignKey("users.id"))
 
     # roommate preferences
     housing_type = Column(String)  # 'dorm', 'apartment', 'house'

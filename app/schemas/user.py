@@ -9,13 +9,11 @@ HousingIntent = Literal["on", "off", "both"]
 
 
 class UserCreate(BaseModel):
-    username: str
+    utd_id: str
+    email: str
     first_name: str
     last_name: str
     birthdate: Optional[date] = None
-    housing_intent: HousingIntent = "both"
-    bio: Optional[str] = None
-    profile_picture_url: Optional[str] = None
 
     class Config:
         from_attributes = True
@@ -23,16 +21,13 @@ class UserCreate(BaseModel):
 
 class UserResponse(BaseModel):
     firebase_uid: str
-    username: str
+    utd_id: str
+    email: str
     first_name: str
     last_name: str
     age: Optional[int] = None
     birthdate: Optional[date] = None
-    housing_intent: HousingIntent = "both"
-    bio: Optional[str] = None
-    profile_picture_url: Optional[str] = None
     created_at: datetime
 
     class Config:
         from_attributes = True
-        
