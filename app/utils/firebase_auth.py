@@ -19,13 +19,23 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(s
         # verify the firebase token
         decoded_token = auth.verify_id_token(credentials.credentials)
         return decoded_token
+    except auth.InvalidIdTokenError as e:
+        raise HTTPException(status_code=401, detail=f"Invalid Firebase token: {str(e)}")
+    except auth.ExpiredIdTokenError as e:
+        raise HTTPException(status_code=401, detail="Firebase token has expired")
+    except auth.RevokedIdTokenError as e:
+        raise HTTPException(status_code=401, detail="Firebase token has been revoked")
     except Exception as e:
-        raise HTTPException(status_code=401, detail="invalid authentication token")
+        raise HTTPException(status_code=401, detail=f"Authentication error: {str(e)}")
 
 
 async def get_firebase_user(uid: str):
     try:
         user = auth.get_user(uid)
         return user
+    except auth.UserNotFoundError as e:
+        raise HTTPException(status_code=404, detail="Firebase user not found")
     except Exception as e:
-        raise HTTPException(status_code=404, detail="user not found")
+        raise HTTPException(status_code=500, detail=f"Error fetching Firebase user: {str(e)}")
+
+

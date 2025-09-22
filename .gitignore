@@ -212,3 +212,5 @@ firebase-key.json
 *.log
 alembic/versions/*.py
 !alembic/versions/
+*.html
+node_modules/

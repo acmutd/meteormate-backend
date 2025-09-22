@@ -19,16 +19,16 @@ async def create_survey(
     db: Session = Depends(get_db)
 ):
     # check if user exists
-    user = db.query(User).filter(User.firebase_uid == current_user_token["uid"]).first()
+    user = db.query(User).filter(User.id == current_user_token["id"]).first()
     if not user:
-        raise HTTPException(status_code=404, detail="user not found")
+        raise HTTPException(status_code=404, detail="User not found")
 
     # check if survey already exists
-    existing_survey = db.query(Survey).filter(Survey.user_id == user.firebase_uid).first()
+    existing_survey = db.query(Survey).filter(Survey.user_id == user.id).first()
     if existing_survey:
-        raise HTTPException(status_code=400, detail="survey already exists")
+        raise HTTPException(status_code=400, detail="Survey already exists")
 
-    new_survey = Survey(user_id=user.firebase_uid, **survey_data.dict())
+    new_survey = Survey(user_id=user.id, **survey_data.dict())
 
     db.add(new_survey)
     db.commit()
