@@ -13,5 +13,4 @@ class Match(Base):
     user_id = Column(String, ForeignKey("users.id"))
     target_user_id = Column(String, ForeignKey("users.id"))
     is_like = Column(Boolean)  # true for like, false for pass
-    is_mutual = Column(Boolean, default=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
