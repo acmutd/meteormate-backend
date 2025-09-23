@@ -2,7 +2,7 @@
 # ACM MeteorMate | All Rights Reserved
 
 from datetime import date
-from sqlalchemy import Column, String, Boolean, DateTime, Text, Date, func
+from sqlalchemy import Column, Boolean, DateTime, Text, Date, func
 from sqlalchemy.dialects import postgresql
 from sqlalchemy.ext.hybrid import hybrid_property
 from app.database import Base
@@ -11,17 +11,19 @@ from app.database import Base
 class User(Base):
     __tablename__ = "users"
 
-    id = Column(String, primary_key=True, index=True)
-    utd_id = Column(String, unique=True, index=True)
-    email = Column(String, unique=True, index=True)
-    first_name = Column(String)
-    last_name = Column(String)
+    id = Column(Text, primary_key=True, index=True)
+    utd_id = Column(Text, unique=True, index=True)
+    email = Column(Text, unique=True, index=True)
+    first_name = Column(Text)
+    last_name = Column(Text)
     birthdate = Column(Date)
 
     # behind-the-scenes stuff
     is_active = Column(Boolean, nullable=False, server_default='true', default=True)
     created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
-    updated_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now(), onupdate=func.now())
+    updated_at = Column(
+        DateTime(timezone=True), nullable=False, server_default=func.now(), onupdate=func.now()
+    )
 
     # compute age
     @hybrid_property
@@ -29,10 +31,10 @@ class User(Base):
         if not self.birthdate:
             return None
         today = date.today()
-        return today.year - self.birthdate.year - (
-                (today.month, today.day) < (self.birthdate.month, self.birthdate.day)
-        )
+        return today.year - self.birthdate.year - ((today.month, today.day)
+                                                   < (self.birthdate.month, self.birthdate.day))
 
     @age.expression
     def age(cls):
-        return func.extract('year', func.age(func.current_date(), cls.birthdate)).cast(postgresql.INTEGER)
+        return func.extract('year', func.age(func.current_date(),
+                                             cls.birthdate)).cast(postgresql.INTEGER)

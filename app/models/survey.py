@@ -1,7 +1,7 @@
 # Created by Ryan Polasky | 7/12/25
 # ACM MeteorMate | All Rights Reserved
 
-from sqlalchemy import Column, Integer, String, Text, ForeignKey, DateTime, JSON
+from sqlalchemy import Column, Integer, Text, ForeignKey, DateTime, JSON
 from sqlalchemy.dialects.postgresql import JSONB, ARRAY
 from sqlalchemy import Enum as PGEnum
 from sqlalchemy.sql import func
