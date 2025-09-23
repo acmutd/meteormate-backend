@@ -20,9 +20,18 @@ class MatchingService:
         if not user_survey:
             return []
 
+        # get IDs of users already passed/matched
+        interacted_user_ids = (
+            self.db.query(Match.target_user_id).filter(Match.user_id == user_id).all()
+        )
+        # extract IDs
+        seen_ids = {uid for (uid, ) in interacted_user_ids}
+        seen_ids.add(user_id)  # exclude the user themselves obviously
+
         # get other users' surveys (excluding already matched/passed)
-        other_surveys = self.db.query(Survey).filter(Survey.user_id != user_id).limit(limit * 2
-                                                                                      ).all()
+        other_surveys = (
+            self.db.query(Survey).filter(Survey.user_id.notin_(seen_ids)).limit(limit * 2).all()
+        )
 
         matches = []
         for survey in other_surveys:
@@ -87,18 +96,21 @@ class MatchingService:
 
         return max(0, min(100, score))
 
-    def _budgets_overlap(self, survey1: Survey, survey2: Survey) -> bool:
+    @staticmethod
+    def _budgets_overlap(survey1: Survey, survey2: Survey) -> bool:
         return not (
             survey1.budget_max < survey2.budget_min or survey2.budget_max < survey1.budget_min
         )
 
-    def _compare_numeric_preference(self, val1: int, val2: int, tolerance: int) -> float:
+    @staticmethod
+    def _compare_numeric_preference(val1: int, val2: int, tolerance: int) -> float:
         diff = abs(val1 - val2)
         if diff <= tolerance:
             return 10 - (diff * 2)
         return 0
 
-    def _has_deal_breaker_conflict(self, survey1: Survey, survey2: Survey) -> bool:
+    @staticmethod
+    def _has_deal_breaker_conflict(survey1: Survey, survey2: Survey) -> bool:
         # todo - implement deal breaker logic
         return False
 
