@@ -75,7 +75,7 @@ async def send_verification_email(email: str, code: str, first_name: str):
                             <!-- Welcome Message -->
                             <tr>
                                 <td style="padding: 20px 40px;">
-                                    <h2 class="header-text" style="margin: 0 0 10px 0; font-family: 'Outfit', Arial, sans-serif; font-size: 32px; font-weight: 700; color: #FFFFFF; text-align: center;">Welcome, {first_name}! 👋</h2>
+                                    <h2 class="header-text" style="margin: 0 0 10px 0; font-family: 'Outfit', Arial, sans-serif; font-size: 32px; font-weight: 700; color: #FFFFFF; text-align: center;">Welcome! 👋</h2>
                                     <p style="margin: 0; font-family: 'Outfit', Arial, sans-serif; font-size: 16px; font-weight: 400; color: rgba(255, 255, 255, 0.8); text-align: center; line-height: 1.6;">
                                         You're one step away from finding your perfect roommate at UT Dallas!
                                     </p>

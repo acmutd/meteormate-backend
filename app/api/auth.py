@@ -10,7 +10,7 @@ from sqlalchemy.exc import IntegrityError
 from firebase_admin import auth
 
 from app.database import get_db
-from app.models.user import User
+from app.models.user import User, UserCreationRequest
 from app.utils.firebase_auth import get_current_user, get_firebase_user, verification_codes
 from app.utils.email import send_verification_email
 from app.schemas.user import UserCreate, UserResponse
@@ -101,44 +101,37 @@ async def get_current_user_profile(
 
 @router.post("/send-verification-code")
 async def send_verification_code(
-    current_user_token=Depends(get_current_user),
-    db: Session = Depends(get_db),
+        request: UserCreationRequest,
+        db: Session = Depends(get_db),
 ):
     """Send 6-digit verification code to user's email"""
-    uid = current_user_token.get("uid")
 
-    # get user from PostgreSQL
-    user = db.query(User).filter(User.id == uid).first()
-    if not user:
-        raise HTTPException(status_code=404, detail="User not found")
-
-    # check if already verified
-    firebase_user = await get_firebase_user(uid)
+    # Check if already verified using Firebase directly
+    firebase_user = await get_firebase_user(request.uid)
     if firebase_user.email_verified:
         raise HTTPException(status_code=400, detail="Email already verified")
 
-    # generate 6-digit code
+    # Generate 6-digit code
     code = str(random.randint(100000, 999999))
 
-    # store in memory (auto-expires after 30 min)
-    verification_codes[uid] = code
+    # Store in memory using UID as key
+    verification_codes[request.uid] = code
 
-    # send email
-    await send_verification_email(user.email, code, user.first_name)
+    # Send email
+    await send_verification_email(request.email, code, firebase_user.display_name or "User")
 
     return {"message": "Verification code sent to email"}
 
 
 @router.post("/verify-email")
 async def verify_email(
-    code: str,
-    current_user_token=Depends(get_current_user),
+        email: str,
+        code: str,
 ):
     """Verify email using 6-digit code"""
-    uid = current_user_token.get("uid")
 
-    # get code from memory
-    stored_code = verification_codes.get(uid)
+    # get code from memory using email
+    stored_code = verification_codes.get(email)
 
     if not stored_code:
         raise HTTPException(
@@ -149,6 +142,13 @@ async def verify_email(
     if stored_code != code:
         raise HTTPException(status_code=400, detail="Invalid verification code")
 
+    # get user from Firebase by email to get their UID
+    try:
+        firebase_user = auth.get_user_by_email(email)
+        uid = firebase_user.uid
+    except Exception as e:
+        raise HTTPException(status_code=404, detail=f"Firebase user not found: {str(e)}")
+
     # mark email as verified in Firebase
     try:
         auth.update_user(uid, email_verified=True)
@@ -156,6 +156,6 @@ async def verify_email(
         raise HTTPException(status_code=500, detail=f"Error updating Firebase user: {str(e)}")
 
     # delete code after successful verification
-    del verification_codes[uid]
+    del verification_codes[email]
 
     return {"message": "Email verified successfully"}
