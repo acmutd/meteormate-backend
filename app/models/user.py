@@ -38,3 +38,13 @@ class User(Base):
     def age(cls):
         return func.extract('year', func.age(func.current_date(),
                                              cls.birthdate)).cast(postgresql.INTEGER)
+
+
+class UserRequestVerify(BaseModel):
+    email: EmailStr
+    uid: str
+
+
+class UserCompleteVerify(BaseModel):
+    email: EmailStr
+    code: str

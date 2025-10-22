@@ -7,8 +7,9 @@ from sqlalchemy.exc import IntegrityError
 from firebase_admin import auth
 
 from app.database import get_db
-from app.models.user import User
-from app.utils.firebase_auth import get_current_user, get_firebase_user
+from app.models.user import User, UserRequestVerify, UserCompleteVerify
+from app.utils.firebase_auth import get_current_user, get_firebase_user, verification_codes
+from app.utils.email import send_verification_email
 from app.schemas.user import UserCreate, UserResponse
 
 router = APIRouter()
@@ -76,3 +77,61 @@ async def get_current_user_profile(
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
     return user
+
+
+@router.post("/send-verification-code")
+async def send_verification_code(
+        request: UserRequestVerify,
+):
+    """Send 6-digit verification code to user's email"""
+
+    # Check if already verified using Firebase directly
+    firebase_user = await get_firebase_user(request.uid)
+    if firebase_user.email_verified:
+        raise HTTPException(status_code=400, detail="Email already verified")
+
+    # Generate 6-digit code
+    code = str(random.randint(100000, 999999))
+
+    # Store in memory using UID as key
+    verification_codes[request.uid] = code
+
+    # Send email
+    await send_verification_email(request.email, code, firebase_user.display_name or "User")
+
+    return {"message": "Verification code sent to email"}
+
+
+@router.post("/verify-email")
+async def verify_email(
+        request: UserCompleteVerify
+):
+    """Verify email using 6-digit code"""
+
+    # get Firebase user by email to get UID
+    try:
+        firebase_user = auth.get_user_by_email(request.email)
+        uid = firebase_user.uid
+    except Exception as e:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    # get code from memory
+    stored_code = verification_codes.get(uid)
+
+    if not stored_code:
+        raise HTTPException(status_code=400, detail="No verification code found")
+
+    # check if code matches
+    if stored_code != request.code:
+        raise HTTPException(status_code=400, detail="Invalid verification code")
+
+    # mark email as verified in Firebase
+    try:
+        auth.update_user(uid, email_verified=True)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error updating user: {str(e)}")
+
+    # Delete code after successful verification
+    del verification_codes[uid]
+
+    return {"message": "Email verified successfully"}
