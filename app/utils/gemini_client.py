@@ -44,7 +44,7 @@ class GeminiClient:
             response = self.client.models.generate_content(
                 model=self.model_name,
                 contents=prompt,
-                # don't need API key passed in, just needs to be the env var
+                # don't need API key passed in, just needs to be the .env var
             )
             return str(response.text) if hasattr(response, 'text') else str(response)
         except Exception as e:
