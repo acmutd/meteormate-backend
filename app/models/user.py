@@ -2,6 +2,8 @@
 # ACM MeteorMate | All Rights Reserved
 
 from datetime import date
+
+from pydantic import BaseModel, EmailStr
 from sqlalchemy import Column, Boolean, DateTime, Text, Date, func
 from sqlalchemy.dialects import postgresql
 from sqlalchemy.ext.hybrid import hybrid_property

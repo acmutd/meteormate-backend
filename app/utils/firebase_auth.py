@@ -2,6 +2,7 @@
 # ACM MeteorMate | All Rights Reserved
 
 import firebase_admin
+from expiringdict import ExpiringDict
 from firebase_admin import credentials, auth
 from fastapi import HTTPException, Depends
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
@@ -12,6 +13,8 @@ cred = credentials.Certificate(settings.FIREBASE_CREDENTIALS_PATH)
 firebase_admin.initialize_app(cred)
 
 security = HTTPBearer()
+
+verification_codes = ExpiringDict(max_len=10000, max_age_seconds=1800)
 
 
 async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)):
