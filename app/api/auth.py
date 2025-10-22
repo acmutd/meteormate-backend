@@ -1,9 +1,6 @@
 # Created by Ryan Polasky | 7/12/25
 # ACM MeteorMate | All Rights Reserved
 
-import random
-from datetime import datetime, timedelta
-
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
@@ -20,8 +17,8 @@ router = APIRouter()
 
 @router.post("/register", response_model=UserResponse)
 async def register_user(
-    user_data: UserCreate,
-    db: Session = Depends(get_db),
+        user_data: UserCreate,
+        db: Session = Depends(get_db),
 ):
     # check if net id is already taken
     existing_utd_user = db.query(User).filter(User.utd_id == user_data.utd_id).first()
@@ -36,7 +33,9 @@ async def register_user(
     try:
         # create Firebase user
         firebase_user = auth.create_user(
-            email=user_data.email, password=user_data.password, email_verified=False
+            email=user_data.email,
+            password=user_data.password,
+            email_verified=False
         )
 
         # create user in db
@@ -52,25 +51,6 @@ async def register_user(
         db.add(new_user)
         db.commit()
         db.refresh(new_user)
-
-        # Generate and store verification code in Firestore
-        code = str(random.randint(100000, 999999))
-        db.collection('verification_codes').document(firebase_user.uid).set({
-            'code':
-            code,
-            'email':
-            user_data.email,
-            'created_at':
-            datetime.utcnow(),
-            'expires_at':
-            datetime.utcnow() + timedelta(minutes=30)
-        })
-
-        # Send verification email (don't fail registration if email fails)
-        try:
-            await send_verification_email(user_data.email, code, user_data.first_name)
-        except Exception as e:
-            print(f"Warning: Failed to send verification email: {e}")
 
         return new_user
 
@@ -89,8 +69,8 @@ async def register_user(
 
 @router.get("/me", response_model=UserResponse)
 async def get_current_user_profile(
-    current_user_token=Depends(get_current_user),
-    db: Session = Depends(get_db),
+        current_user_token=Depends(get_current_user),
+        db: Session = Depends(get_db),
 ):
     uid = current_user_token.get("uid")
     user = db.query(User).filter(User.id == uid).first()
