@@ -20,8 +20,8 @@ class Settings:
     # email config - might not need this at all
     SMTP_SERVER: str = config("SMTP_SERVER", default="")
     SMTP_PORT: int = config("SMTP_PORT", default=587, cast=int)
-    EMAIL_USER: str = config("EMAIL_USER", default="")
-    EMAIL_PASSWORD: str = config("EMAIL_PASSWORD", default="")
+    SMTP_USERNAME: str = config("SMTP_USERNAME", default="")
+    SMTP_PASSWORD: str = config("SMTP_PASSWORD", default="")
 
 
 settings = Settings()

@@ -6,7 +6,6 @@ from sqlalchemy import Column, Boolean, DateTime, Text, Date, func
 from sqlalchemy.dialects import postgresql
 from sqlalchemy.ext.hybrid import hybrid_property
 from app.database import Base
-from pydantic import BaseModel, EmailStr
 
 
 class User(Base):
@@ -39,8 +38,3 @@ class User(Base):
     def age(cls):
         return func.extract('year', func.age(func.current_date(),
                                              cls.birthdate)).cast(postgresql.INTEGER)
-
-
-class UserCreationRequest(BaseModel):
-    email: EmailStr
-    uid: str
