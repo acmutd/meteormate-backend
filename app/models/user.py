@@ -41,6 +41,11 @@ class User(Base):
                                              cls.birthdate)).cast(postgresql.INTEGER)
 
 
-class UserCreationRequest(BaseModel):
+class UserRequestVerify(BaseModel):
     email: EmailStr
     uid: str
+
+
+class UserCompleteVerify(BaseModel):
+    email: EmailStr
+    code: str
