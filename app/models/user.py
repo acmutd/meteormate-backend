@@ -2,12 +2,14 @@
 # ACM MeteorMate | All Rights Reserved
 
 from datetime import date
+from typing import Optional
 
 from pydantic import BaseModel, EmailStr
 from sqlalchemy import Column, Boolean, DateTime, Text, Date, func
 from sqlalchemy.dialects import postgresql
 from sqlalchemy.ext.hybrid import hybrid_property
 from app.database import Base
+from typing import Optional, Literal
 
 
 class User(Base):
@@ -44,9 +46,15 @@ class User(Base):
 
 class UserRequestVerify(BaseModel):
     email: EmailStr
-    uid: str
+    uid: Optional[str] = None
+    purpose: Literal["verify", "reset"] = "verify"
 
 
 class UserCompleteVerify(BaseModel):
     email: EmailStr
     code: str
+
+class UserResetPassword(BaseModel):
+    email: EmailStr
+    code: str
+    new_password: str

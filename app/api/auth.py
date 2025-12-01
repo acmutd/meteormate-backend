@@ -9,7 +9,7 @@ from sqlalchemy.exc import IntegrityError
 from firebase_admin import auth
 
 from app.database import get_db
-from app.models.user import User, UserRequestVerify, UserCompleteVerify
+from app.models.user import User, UserRequestVerify, UserCompleteVerify, UserResetPassword
 from app.utils.firebase_auth import get_current_user, get_firebase_user, verification_codes
 from app.utils.email import send_verification_email
 from app.schemas.user import UserCreate, UserResponse
@@ -87,21 +87,88 @@ async def send_verification_code(
 ):
     """Send 6-digit verification code to user's email"""
 
-    # Check if already verified using Firebase directly
-    firebase_user = await get_firebase_user(request.uid)
-    if firebase_user.email_verified:
+    email_str = str(request.email)
+
+    try:
+        if request.uid:
+            firebase_user = await get_firebase_user(request.uid)
+        else:
+            firebase_user = auth.get_user_by_email(email_str)
+    except auth.UserNotFoundError:
+        raise HTTPException(status_code=404, detail="User not found")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error fetching user: {str(e)}")
+
+    # Only block if this is for signup email verification
+    if request.purpose == "verify" and firebase_user.email_verified:
         raise HTTPException(status_code=400, detail="Email already verified")
 
-    # Generate 6-digit code
+    # (optional) For reset, you *might* want the opposite:
+    # if request.purpose == "reset" and not firebase_user.email_verified:
+    #     raise HTTPException(status_code=400, detail="Email not verified yet")
+
     code = str(random.randint(100000, 999999))
+    uid = firebase_user.uid
+    verification_codes[uid] = code
 
-    # Store in memory using UID as key
-    verification_codes[request.uid] = code
-
-    # Send email
-    await send_verification_email(request.email, code, firebase_user.display_name or "User")
+    await send_verification_email(
+        email_str,
+        code,
+        firebase_user.display_name or "User"
+    )
 
     return {"message": "Verification code sent to email"}
+
+
+@router.post("/verify-reset-code")
+async def verify_reset_code(request: UserCompleteVerify):
+    email_str = str(request.email)
+    try:
+        firebase_user = auth.get_user_by_email(email_str)
+        uid = firebase_user.uid
+    except auth.UserNotFoundError:
+        raise HTTPException(status_code=404, detail="User not found")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error fetching user: {str(e)}")
+
+    stored_code = verification_codes.get(uid)
+    if not stored_code:
+        raise HTTPException(status_code=400, detail="No verification code found")
+
+    if stored_code != request.code:
+        raise HTTPException(status_code=400, detail="Invalid verification code")
+
+    return {"message": "Code verified"}
+
+
+@router.post("/reset-password")
+async def reset_password(request: UserResetPassword):
+    """Reset password using email + 6-digit code"""
+
+    email_str = str(request.email)
+
+    try:
+        firebase_user = auth.get_user_by_email(email_str)
+        uid = firebase_user.uid
+    except auth.UserNotFoundError:
+        raise HTTPException(status_code=404, detail="User not found")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error fetching user: {str(e)}")
+
+    stored_code = verification_codes.get(uid)
+    if not stored_code:
+        raise HTTPException(status_code=400, detail="No verification code found")
+    if stored_code != request.code:
+        raise HTTPException(status_code=400, detail="Invalid verification code")
+
+    try:
+        auth.update_user(uid, password=request.new_password)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error updating password: {str(e)}")
+
+    del verification_codes[uid]
+
+    return {"message": "Password updated successfully"}
 
 
 @router.post("/verify-email")
