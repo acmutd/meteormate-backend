@@ -81,7 +81,7 @@ async def get_current_user_profile(
     return user
 
 
-@router.post("/send-verification-code") #changed here
+@router.post("/send-verification-code")
 async def send_verification_code(
         request: UserRequestVerify,
 ):
@@ -99,7 +99,7 @@ async def send_verification_code(
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error fetching user: {str(e)}")
 
-    # 🔑 Only block if this is for signup email verification
+    # Only block if this is for signup email verification
     if request.purpose == "verify" and firebase_user.email_verified:
         raise HTTPException(status_code=400, detail="Email already verified")
 
@@ -122,7 +122,6 @@ async def send_verification_code(
 
 @router.post("/verify-reset-code")
 async def verify_reset_code(request: UserCompleteVerify):
-
     email_str = str(request.email)
     try:
         firebase_user = auth.get_user_by_email(email_str)
@@ -140,6 +139,7 @@ async def verify_reset_code(request: UserCompleteVerify):
         raise HTTPException(status_code=400, detail="Invalid verification code")
 
     return {"message": "Code verified"}
+
 
 @router.post("/reset-password")
 async def reset_password(request: UserResetPassword):
@@ -169,6 +169,7 @@ async def reset_password(request: UserResetPassword):
     del verification_codes[uid]
 
     return {"message": "Password updated successfully"}
+
 
 @router.post("/verify-email")
 async def verify_email(
