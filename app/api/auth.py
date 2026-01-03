@@ -2,12 +2,11 @@
 # ACM MeteorMate | All Rights Reserved
 
 import random
-
+import logging
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
 from firebase_admin import auth
-
 from app.database import get_db
 from app.models.user import User, UserRequestVerify, UserCompleteVerify, UserResetPassword
 from app.utils.firebase_auth import get_current_user, get_firebase_user, verification_codes
@@ -16,6 +15,7 @@ from app.schemas.user import UserCreate, UserResponse
 
 router = APIRouter()
 
+logger = logging.getLogger(__name__)
 
 @router.post("/register", response_model=UserResponse)
 async def register_user(
@@ -24,13 +24,18 @@ async def register_user(
 ):
     # check if net id is already taken
     existing_utd_user = db.query(User).filter(User.utd_id == user_data.utd_id).first()
+
     if existing_utd_user:
+        logger.error(f"STATUS 400 - Account with UTD ID {user_data.utd_id} already exists in \"User\" database")
         raise HTTPException(status_code=400, detail="Account already exists")
+    logger.info(f"Success - No existing user with UTD ID {user_data.utd_id} in \"User\" database")
 
     # check if email is already taken
     existing_email_user = db.query(User).filter(User.email == user_data.email).first()
     if existing_email_user:
+        logger.error(f"STATUS 400 - Account with email {user_data.email} already exists in \"User\" database")
         raise HTTPException(status_code=400, detail="Account already exists")
+    logger.info(f"Success - No existing user with email {user_data.email} already exists in \"User\" database")
 
     try:
         # create Firebase user
@@ -49,23 +54,30 @@ async def register_user(
             birthdate=user_data.birthdate,
             utd_id=user_data.utd_id,
         )
+        
+        logger.info(f"Successfully created User with ID - {new_user.id}, UTD ID - {new_user.utd_id}, email - {new_user.email}")
 
         db.add(new_user)
         db.commit()
         db.refresh(new_user)
 
+        logger.info(f"Successfully committed new User ID {new_user.id} to \"User\" database")
+
         return new_user
 
     except auth.EmailAlreadyExistsError:
+        logger.error(f"STATUS 400 - Account with email {user_data.email} already exists in \"User\" database")
         raise HTTPException(status_code=400, detail="Account already exists")
     except Exception as e:
         db.rollback()
         # if database creation failed but Firebase user was created, clean up
         try:
             if 'firebase_user' in locals():
+                logger.critical(f"Database creation failed, but Firebase User ID {firebase_user.uid} was still created - cleaning up by deleting that Firebase user")
                 auth.delete_user(firebase_user.uid)
         except:
             pass
+        logger.error(f"STATUS 500 - The following error occured when creating User with email {user_data.email} and UTD ID {user_data.utd_id}: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Error creating user: {str(e)}")
 
 
@@ -77,7 +89,9 @@ async def get_current_user_profile(
     uid = current_user_token.get("uid")
     user = db.query(User).filter(User.id == uid).first()
     if not user:
+        logger.error(f"STATUS 404 - User ID {current_user_token.get("uid")} not found in \"User\" database")
         raise HTTPException(status_code=404, detail="User not found")
+    logger.info(f"Successfully found User ID {current_user_token.get("uid")} in \"User\" database")
     return user
 
 
@@ -92,15 +106,20 @@ async def send_verification_code(
     try:
         if request.uid:
             firebase_user = await get_firebase_user(request.uid)
+            logger.info(f"Successfully found User UID {uid} with email {email_str} in the Firebase database")
         else:
             firebase_user = auth.get_user_by_email(email_str)
+            logger.info(f"Successfully found User with email {email_str} in the Firebase database")
     except auth.UserNotFoundError:
+        logger.error(f"STATUS 404 - User with email {email_str} not found in the Firebase database")
         raise HTTPException(status_code=404, detail="User not found")
     except Exception as e:
+        logger.error(f"STATUS 500 - The following error occurred when trying to fetch the user with email {email_str}: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Error fetching user: {str(e)}")
 
     # Only block if this is for signup email verification
     if request.purpose == "verify" and firebase_user.email_verified:
+        logger.error(f"STATUS 400 - User email {email_str} already verified in Firebase database")
         raise HTTPException(status_code=400, detail="Email already verified")
 
     # (optional) For reset, you *might* want the opposite:
@@ -116,6 +135,7 @@ async def send_verification_code(
         code,
         firebase_user.display_name or "User"
     )
+    logger.info(f"Successfully sent verification code to email {email_str}")
 
     return {"message": "Verification code sent to email"}
 
@@ -126,16 +146,21 @@ async def verify_reset_code(request: UserCompleteVerify):
     try:
         firebase_user = auth.get_user_by_email(email_str)
         uid = firebase_user.uid
+        logger.info(f"Successfully found user with email {email_str} and UID {uid} in the Firebase database")
     except auth.UserNotFoundError:
+        logger.error(f"STATUS 404 - User with email {email_str} not found in the Firebase database")
         raise HTTPException(status_code=404, detail="User not found")
     except Exception as e:
+        logger.error(f"STATUS 500 - The following error occurred when trying to fetch the user with email {email_str}: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Error fetching user: {str(e)}")
 
     stored_code = verification_codes.get(uid)
     if not stored_code:
+        logger.error(f"STATUS 400 - Verification code for User UID {uid} not found in the expiring verification_codes cache")
         raise HTTPException(status_code=400, detail="No verification code found")
 
     if stored_code != request.code:
+        logger.error(f"STATUS 400 - Verification code {request.code} entered by User ID {uid} does not match the stored verification code {stored_code}")
         raise HTTPException(status_code=400, detail="Invalid verification code")
 
     return {"message": "Code verified"}
@@ -150,20 +175,28 @@ async def reset_password(request: UserResetPassword):
     try:
         firebase_user = auth.get_user_by_email(email_str)
         uid = firebase_user.uid
+        logger.info(f"Successfully found user with email {email_str} and UID {uid} in the Firebase database")
     except auth.UserNotFoundError:
+        logger.error(f"STATUS 404 - User with email {email_str} not found in the Firebase database")
         raise HTTPException(status_code=404, detail="User not found")
     except Exception as e:
+        logger.error(f"STATUS 500 - The following error occurred when trying to fetch the user with email {email_str}: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Error fetching user: {str(e)}")
 
     stored_code = verification_codes.get(uid)
     if not stored_code:
+        logger.error(f"STATUS 400 - Verification code for User UID {uid} not found in the expiring verification_codes cache")
         raise HTTPException(status_code=400, detail="No verification code found")
     if stored_code != request.code:
+        logger.error(f"STATUS 400 - Verification code {request.code} entered by User ID {uid} does not match the stored verification code {stored_code}")
         raise HTTPException(status_code=400, detail="Invalid verification code")
+    logger.info(f"Successfully found the stored verification code for {email_str} and UID {uid} in the Firebase database")
 
     try:
         auth.update_user(uid, password=request.new_password)
+        logger.info(f"Successfully updated password for User with email {email_str} and UID {uid} in the Firebase database")
     except Exception as e:
+        logger.error(f"STATUS 500 - The following error occurred when trying to update the password for user with email {email_str} and UID {uid}: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Error updating password: {str(e)}")
 
     del verification_codes[uid]
@@ -182,25 +215,33 @@ async def verify_email(
         firebase_user = auth.get_user_by_email(request.email)
         uid = firebase_user.uid
     except Exception as e:
+        logger.error(f"STATUS 404 - User with email {request.email} not found in the Firebase database")
         raise HTTPException(status_code=404, detail="User not found")
+    logger.info(f"Successfully found user with email {request.email} in the Firebase database")
 
     # get code from memory
     stored_code = verification_codes.get(uid)
 
     if not stored_code:
+        logger.error(f"STATUS 400 - Verification code for User UID {uid} not found in the expiring verification_codes cache")
         raise HTTPException(status_code=400, detail="No verification code found")
+    logger.info(f"Successfully found stored verification code for user UID {uid} in the expiring verification_codes cache")
 
     # check if code matches
     if stored_code != request.code:
+        logger.error(f"STATUS 400 - Verification code {request.code} entered by User ID {uid} does not match the stored verification code {stored_code}")
         raise HTTPException(status_code=400, detail="Invalid verification code")
 
     # mark email as verified in Firebase
     try:
         auth.update_user(uid, email_verified=True)
+        logger.info(f"Successfully verified user with email {request.email} and UID {uid} in the Firebase database")
     except Exception as e:
+        logger.error(f"STATUS 500 - The following error occurred when trying to complete verification of User ID {uid}: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Error updating user: {str(e)}")
 
     # Delete code after successful verification
     del verification_codes[uid]
+    logger.info(f"Successfully deleted temporary verification code for User ID {uid} from the expiring verification_codes cache")
 
     return {"message": "Email verified successfully"}
