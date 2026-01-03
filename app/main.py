@@ -24,12 +24,26 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-    datefmt="%Y-%m-%d %H:%M:%S"
-)
-logger = logging.getLogger(__name__) # name of current module ("__main__" for main.py)
+def setup_logging(file_name: str = "app.log"):
+    logger = logging.getLogger() # root logger
+    logger.setLevel(logging.INFO)
+
+    if not logger.handlers:
+        # handler for printing logs to console/terminal
+        console_handler = logging.StreamHandler(file_name)
+        # handler for writing logs to file
+        file_handler = logging.FileHandler()
+
+        fmt = logging.Formatter("%(name)s - %(levelname)s - %(message)s")
+        console_handler.setFormatter(fmt)
+        file_handler.setFormatter(fmt)
+
+        logger.addHandler(console_handler)
+        logger.addHandler(file_handler)
+
+
+setup_logging()
+logger = logging.getLogger(__name__)
 
 @app.middleware("http")
 async def log_requests(request: Request, call_next):
