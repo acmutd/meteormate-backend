@@ -172,7 +172,7 @@ def send_verification_email(email: str, code: str):
                                                         </td>
                                                         <td style="padding: 0 8px; color: rgba(255, 255, 255, 0.3);">•</td>
                                                         <td style="padding: 0 8px;">
-                                                            <a href="#" style="color: rgba(255, 255, 255, 0.5); text-decoration: none; font-size: 11px;">Privacy</a>
+                                                            <a href="https://meteormate.com/privacy" style="color: rgba(255, 255, 255, 0.5); text-decoration: none; font-size: 11px;">Privacy</a>
                                                         </td>
                                                     </tr>
                                                 </table>
@@ -407,7 +407,7 @@ def send_inactive_notices(email: str, notice_num: int):
                                                             </td>
                                                             <td style="padding: 0 8px; color: rgba(255, 255, 255, 0.3);">•</td>
                                                             <td style="padding: 0 8px;">
-                                                                <a href="#" style="color: rgba(255, 255, 255, 0.5); text-decoration: none; font-size: 11px;">Privacy</a>
+                                                                <a href="https://meteormate.com/privacy" style="color: rgba(255, 255, 255, 0.5); text-decoration: none; font-size: 11px;">Privacy</a>
                                                             </td>
                                                         </tr>
                                                     </table>
