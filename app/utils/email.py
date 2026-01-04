@@ -4,10 +4,12 @@
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
-from app.config import settings
 from fastapi import HTTPException
 
+from app.config import settings
 
+
+# noinspection DuplicatedCode
 async def send_verification_email(email: str, code: str):
     """Send verification code via email with MeteorMate branding"""
     try:
