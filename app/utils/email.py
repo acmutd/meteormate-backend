@@ -10,7 +10,7 @@ from app.config import settings
 
 
 # noinspection DuplicatedCode
-async def send_verification_email(email: str, code: str):
+def send_verification_email(email: str, code: str):
     """Send verification code via email with MeteorMate branding"""
     try:
         # create message
@@ -201,7 +201,7 @@ async def send_verification_email(email: str, code: str):
         raise HTTPException(status_code=500, detail=f"Failed to send email: {str(e)}")
 
 
-async def send_inactive_notices(email: str, notice_num: int):
+def send_inactive_notices(email: str, notice_num: int):
     """Send inactivity notices via email with MeteorMate branding"""
     # notice num tells us which notice the user should receive
     email_subj: str = ""
@@ -222,7 +222,7 @@ async def send_inactive_notices(email: str, notice_num: int):
                 "your profile won't be shown to potential roommates until you log back in."
             )
         case 3:  # account inactive
-            email_subj = "Your MeteorMate account is now inactive"
+            email_subj = "Your MeteorMate account is now inactive 💤"
             inactivity_warning = (
                 "Your MeteorMate account is now marked as <strong style=\"color: #FFFFFF;\">inactive</strong>. "
                 "An inactive profile won't be shown to potential roommates until you log back in."
@@ -307,7 +307,7 @@ async def send_inactive_notices(email: str, notice_num: int):
                                                         ⚠️ Account Inactivity Warning
                                                     </p>
                                                     <p style="margin: 0; font-family: 'Outfit', Arial, sans-serif; font-size: 15px; font-weight: 400; color: rgba(255, 255, 255, 0.85); line-height: 1.6;">
-                                                        f{inactivity_warning}
+                                                        {inactivity_warning}
                                                     </p>
                                                 </td>
                                             </tr>
@@ -355,7 +355,7 @@ async def send_inactive_notices(email: str, notice_num: int):
                                             <tr>
                                                 <td style="padding: 20px;">
                                                     <p style="margin: 0; font-family: 'Outfit', Arial, sans-serif; font-size: 14px; font-weight: 400; color: rgba(255, 255, 255, 0.8); line-height: 1.5;">
-                                                        <strong style="color: #509275;">ℹ️ Good to know:</strong> If your account remains inactive for a 2 years after being marked inactive, it will be permanently deleted. But don't worry - logging in anytime before that resets the timer!
+                                                        <strong style="color: #509275;">ℹ️ Good to know:</strong> If your account remains inactive for 2 years after being marked inactive, it will be permanently deleted. But don't worry - logging in anytime before that resets the timer!
                                                     </p>
                                                 </td>
                                             </tr>
