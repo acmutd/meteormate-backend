@@ -1,15 +1,21 @@
 # Created by Ryan Polasky | 7/12/25
 # ACM MeteorMate | All Rights Reserved
-
+import enum
 from datetime import date
 from typing import Optional
 
 from pydantic import BaseModel, EmailStr
-from sqlalchemy import Column, Boolean, DateTime, Text, Date, func
+from sqlalchemy import Column, Boolean, DateTime, Text, Date, func, Enum
 from sqlalchemy.dialects import postgresql
 from sqlalchemy.ext.hybrid import hybrid_property
 from app.database import Base
 from typing import Optional, Literal
+
+
+class InactivityStage(str, enum.Enum):
+    ONE_MONTH = "one_month"
+    ONE_WEEK = "one_week"
+    INACTIVE = "inactive"
 
 
 class User(Base):
@@ -28,6 +34,8 @@ class User(Base):
     updated_at = Column(
         DateTime(timezone=True), nullable=False, server_default=func.now(), onupdate=func.now()
     )
+    inactivity_notification_stage = Column(Enum(InactivityStage), nullable=True)
+    last_inactivity_notification_sent_at = Column(DateTime, nullable=True)
 
     # compute age
     @hybrid_property
@@ -53,6 +61,7 @@ class UserRequestVerify(BaseModel):
 class UserCompleteVerify(BaseModel):
     email: EmailStr
     code: str
+
 
 class UserResetPassword(BaseModel):
     email: EmailStr

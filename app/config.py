@@ -23,5 +23,8 @@ class Settings:
     EMAIL_USER: str = config("EMAIL_USER", default="")
     EMAIL_PASSWORD: str = config("EMAIL_PASSWORD", default="")
 
+    # cron config (i.e. admin token for cron jobs to perform administrative duties)
+    CRON_SECRET: str = config("CRON_SECRET", default="")
+
 
 settings = Settings()
