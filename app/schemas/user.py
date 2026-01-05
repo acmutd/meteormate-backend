@@ -3,7 +3,9 @@
 
 from typing import Optional, Literal
 from datetime import date, datetime
-from pydantic import BaseModel, field_validator
+from pydantic import BaseModel, Field, computed_field, field_validator
+
+from app.schemas.survey import SurveyResponse
 
 HousingIntent = Literal["on", "off", "both"]
 
@@ -38,3 +40,13 @@ class UserResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+class UserSurveyResponse(BaseModel):
+    user: UserResponse
+    survey: Optional[SurveyResponse] = None
+
+    @computed_field
+    @property
+    def survey_done(self) -> bool:
+        return self.survey is not None
