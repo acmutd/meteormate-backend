@@ -9,18 +9,19 @@ from sqlalchemy.exc import IntegrityError
 from firebase_admin import auth
 
 from app.database import get_db
+from app.models.survey import Survey
 from app.models.user import User, UserRequestVerify, UserCompleteVerify, UserResetPassword
 from app.utils.firebase_auth import get_current_user, get_firebase_user, verification_codes
 from app.utils.email import send_verification_email
-from app.schemas.user import UserCreate, UserResponse
+from app.schemas.user import UserCreate, UserResponse, UserSurveyResponse
 
 router = APIRouter()
 
 
 @router.post("/register", response_model=UserResponse)
 async def register_user(
-        user_data: UserCreate,
-        db: Session = Depends(get_db),
+    user_data: UserCreate,
+    db: Session = Depends(get_db),
 ):
     # check if net id is already taken
     existing_utd_user = db.query(User).filter(User.utd_id == user_data.utd_id).first()
@@ -35,9 +36,7 @@ async def register_user(
     try:
         # create Firebase user
         firebase_user = auth.create_user(
-            email=user_data.email,
-            password=user_data.password,
-            email_verified=False
+            email=user_data.email, password=user_data.password, email_verified=False
         )
 
         # create user in db
@@ -69,22 +68,26 @@ async def register_user(
         raise HTTPException(status_code=500, detail=f"Error creating user: {str(e)}")
 
 
-@router.get("/me", response_model=UserResponse)
+@router.get("/me", response_model=UserSurveyResponse)
 async def get_current_user_profile(
-        current_user_token=Depends(get_current_user),
-        db: Session = Depends(get_db),
+    current_user_token=Depends(get_current_user),
+    db: Session = Depends(get_db),
 ):
     uid = current_user_token.get("uid")
     user = db.query(User).filter(User.id == uid).first()
+
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
-    return user
+
+    survey = db.query(Survey).filter(Survey.user_id == uid).first()
+    if not survey:
+        return {"user": user, "survey": None}
+
+    return {"user": user, "survey": survey}
 
 
 @router.post("/send-verification-code")
-async def send_verification_code(
-        request: UserRequestVerify,
-):
+async def send_verification_code(request: UserRequestVerify, ):
     """Send 6-digit verification code to user's email"""
 
     email_str = str(request.email)
@@ -111,11 +114,7 @@ async def send_verification_code(
     uid = firebase_user.uid
     verification_codes[uid] = code
 
-    await send_verification_email(
-        email_str,
-        code,
-        firebase_user.display_name or "User"
-    )
+    await send_verification_email(email_str, code, firebase_user.display_name or "User")
 
     return {"message": "Verification code sent to email"}
 
@@ -172,9 +171,7 @@ async def reset_password(request: UserResetPassword):
 
 
 @router.post("/verify-email")
-async def verify_email(
-        request: UserCompleteVerify
-):
+async def verify_email(request: UserCompleteVerify):
     """Verify email using 6-digit code"""
 
     # get Firebase user by email to get UID
