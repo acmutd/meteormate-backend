@@ -3,7 +3,9 @@
 
 from typing import Optional, Literal
 from datetime import date, datetime
-from pydantic import BaseModel, validator
+from pydantic import BaseModel, Field, computed_field, field_validator
+
+from app.schemas.survey import SurveyResponse
 
 HousingIntent = Literal["on", "off", "both"]
 
@@ -16,7 +18,7 @@ class UserCreate(BaseModel):
     last_name: str
     birthdate: Optional[date] = None
 
-    @validator('email')
+    @field_validator('email')
     def validate_utd_email(cls, v):
         if not v.endswith('@utdallas.edu'):
             raise ValueError('Email must be a valid @utdallas.edu address')
@@ -38,3 +40,13 @@ class UserResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+class UserSurveyResponse(BaseModel):
+    user: UserResponse
+    survey: Optional[SurveyResponse] = None
+
+    @computed_field
+    @property
+    def survey_done(self) -> bool:
+        return self.survey is not None

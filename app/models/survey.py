@@ -50,20 +50,20 @@ class Survey(Base):
     user_id = Column(Text, ForeignKey("users.id"))
 
     # roommate preferences
-    housing_types = Column(
+    housing_type = Column(
         ARRAY(PGEnum(HousingTypeEnum, name="housingtypeenum")), nullable=False, server_default="{}"
     )
     budget_min = Column(Integer)
     budget_max = Column(Integer)
     move_in_date = Column(DateTime)
-    housing_types = Column(
+    lease_length = Column(
         ARRAY(PGEnum(HousingTypeEnum, name="leaselengthenum")), nullable=False, server_default="{}"
     )
 
     # lifestyle preferences
     cleanliness_level = Column(Integer)  # 1-5 scale
     noise_level = Column(Integer)  # 1-5 scale
-    guest_frequency = Column(
+    guests_frequency = Column(
         ARRAY(PGEnum(HousingTypeEnum, name="guestfrequencyenum")),
         nullable=False,
         server_default="{}"

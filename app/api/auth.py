@@ -10,10 +10,11 @@ from sqlalchemy.exc import IntegrityError
 from firebase_admin import auth
 
 from app.database import get_db
+from app.models.survey import Survey
 from app.models.user import User, UserRequestVerify, UserCompleteVerify, UserResetPassword
 from app.utils.firebase_auth import get_current_user, get_firebase_user, verification_codes
 from app.utils.email import send_verification_email
-from app.schemas.user import UserCreate, UserResponse
+from app.schemas.user import UserCreate, UserResponse, UserSurveyResponse
 
 router = APIRouter()
 
@@ -68,16 +69,22 @@ async def register_user(
         raise HTTPException(status_code=500, detail=f"Error creating user: {str(e)}")
 
 
-@router.get("/me", response_model=UserResponse)
+@router.get("/me", response_model=UserSurveyResponse)
 async def get_current_user_profile(
     current_user_token=Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
     uid = current_user_token.get("uid")
     user = db.query(User).filter(User.id == uid).first()
+
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
-    return user
+
+    survey = db.query(Survey).filter(Survey.user_id == uid).first()
+    if not survey:
+        return {"user": user, "survey": None}
+
+    return {"user": user, "survey": survey}
 
 
 @router.post("/send-verification-code")
