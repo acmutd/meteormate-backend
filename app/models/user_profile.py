@@ -17,18 +17,15 @@ GENDER_ENUM = PGEnum(
     create_type=True
 )
 
-CLASS_YEAR_ENUM = PGEnum(
+CLASSIFICATION_ENUM = PGEnum(
     'freshman',
     'sophomore',
     'junior',
     'senior',
     'graduate',
-    'other',
-    name='class_year_enum',
+    name='classification_enum',
     create_type=True
 )
-
-HOUSING_INTENT = postgresql.ENUM('on', 'off', 'both', name='housing_intent_enum', create_type=True)
 
 
 class UserProfile(Base):
@@ -38,8 +35,7 @@ class UserProfile(Base):
 
     gender = Column(GENDER_ENUM)
     major = Column(Text)
-    class_year = Column(CLASS_YEAR_ENUM)
-    housing_intent = Column(HOUSING_INTENT, nullable=False, server_default='both')
+    classification = Column(CLASSIFICATION_ENUM)
     llc = Column(Boolean)
     bio = Column(Text)
     profile_picture_url = Column(Text)
@@ -49,11 +45,3 @@ class UserProfile(Base):
     updated_at = Column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False
     )
-
-    @hybrid_property
-    def is_freshman(self):
-        return self.class_year == 'freshman'
-
-    @is_freshman.expression
-    def is_freshman(cls):
-        return cls.class_year == 'freshman'

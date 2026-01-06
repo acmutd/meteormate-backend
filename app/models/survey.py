@@ -1,89 +1,181 @@
 # Created by Ryan Polasky | 7/12/25
 # ACM MeteorMate | All Rights Reserved
 
-from sqlalchemy import Column, Integer, Text, ForeignKey, DateTime, JSON
-from sqlalchemy.dialects.postgresql import JSONB, ARRAY
-from sqlalchemy import Enum as PGEnum
-from sqlalchemy.sql import func
-from sqlalchemy.orm import relationship
-from app.database import Base
 import enum
 
+from sqlalchemy import (Column, Integer, Text, ForeignKey, Date, DateTime, Boolean, text)
+from sqlalchemy import Enum as PGEnum
+from sqlalchemy.dialects.postgresql import JSONB, ARRAY
+from sqlalchemy.orm import relationship
+from sqlalchemy.sql import func
 
-class HousingTypeEnum(str, enum.Enum):
-    DORM = "dorm"
-    APARTMENT = "apartment"
-    HOUSE = "house"
+from app.database import Base
 
 
+# Shared housing enums
 class LeaseLengthEnum(str, enum.Enum):
     SEMESTER = "semester"
+    ACADEMIC = "academic"
     YEAR = "year"
-    SUMMER = "summer"
-    OTHER = "other"
+
+
+class HousingIntentEnum(str, enum.Enum):
+    ON_CAMPUS = "on_campus"
+    OFF_CAMPUS = "off_campus"
+    BOTH = "both"
+
+
+# Wake/Clean/Noise tile enums
+class WakeTimeEnum(str, enum.Enum):
+    EARLY_BIRD = "early_bird"
+    FLEXIBLE = "flexible"
+    NIGHT_OWL = "night_owl"
+
+
+class CleanlinessEnum(str, enum.Enum):
+    RELAXED = "relaxed"
+    TIDY = "tidy"
+    NEAT_FREAK = "neat_freak"
+
+
+class NoiseToleranceEnum(str, enum.Enum):
+    QUIET = "quiet"
+    MODERATE = "moderate"
+    LOUD = "loud"
+
+
+# Lifestyle tile enums
+class CookingFrequencyEnum(str, enum.Enum):
+    NEVER = "never"
+    RARELY = "rarely"
+    OFTEN = "often"
+
+
+class PetPreferenceEnum(str, enum.Enum):
+    OKAY = "okay"
+    NOT_OKAY = "not_okay"
+    HAVE_A_PET = "have_a_pet"
 
 
 class GuestsFrequencyEnum(str, enum.Enum):
     NEVER = "never"
-    RARELY = "rarely"
     SOMETIMES = "sometimes"
     OFTEN = "often"
 
 
-class StudyHabitsEnum(str, enum.Enum):
-    LIBRARY = "library"
-    ROOM = "room"
-    COMMON_AREAS = "common_areas"
-    ANYWHERE = "anywhere"
+class RoommateClosenessEnum(str, enum.Enum):
+    NOT_CLOSE = "not_close"
+    FRIENDS = "friends"
+    CLOSE_FRIENDS = "close_friends"
 
 
-class SleepScheduleEnum(str, enum.Enum):
-    EARLY_BIRD = "early_bird"
-    NIGHT_OWL = "night_owl"
-    FLEXIBLE = "flexible"
+# Dealbreakers
+class DealbreakerEnum(str, enum.Enum):
+    SMOKE_VAPE = "smoke_vape"
+    DRINK = "drink"
+    SAME_GENDER = "same_gender"
+
+
+# On-campus flow
+class OnCampusLocationEnum(str, enum.Enum):
+    UV = "uv"
+    CC = "cc"
+    FRESHMAN_DORMS = "freshman_dorms"
+    NORTHSIDE = "northside"
+
+
+class NumRoommatesEnum(str, enum.Enum):
+    NO_PREFERENCE = "no_preference"
+    ONE = "one"
+    TWO = "two"
+    THREE = "three"
+
+
+# Off-campus "have a lease" flow
+class HaveLeaseLengthEnum(str, enum.Enum):
+    SEMESTER = "semester"
+    ACADEMIC_YEAR = "academic_year"
+    YEAR = "year"
 
 
 class Survey(Base):
     __tablename__ = "surveys"
 
-    id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Text, ForeignKey("users.id"))
-
-    # roommate preferences
-    housing_type = Column(
-        ARRAY(PGEnum(HousingTypeEnum, name="housingtypeenum")), nullable=False, server_default="{}"
-    )
-    budget_min = Column(Integer)
-    budget_max = Column(Integer)
-    move_in_date = Column(DateTime)
-    lease_length = Column(
-        ARRAY(PGEnum(HousingTypeEnum, name="leaselengthenum")), nullable=False, server_default="{}"
+    user_id = Column(
+        Text,
+        ForeignKey("users.id", ondelete="CASCADE"),
+        primary_key=True,
+        index=True,
     )
 
-    # lifestyle preferences
-    cleanliness_level = Column(Integer)  # 1-5 scale
-    noise_level = Column(Integer)  # 1-5 scale
-    guests_frequency = Column(
-        ARRAY(PGEnum(HousingTypeEnum, name="guestfrequencyenum")),
+    # Core housing fields
+    housing_intent = Column(PGEnum(HousingIntentEnum, name="housing_intent_enum"), nullable=True)
+
+    # Sliders (rent/budget)
+    budget_min = Column(Integer, nullable=True)
+    budget_max = Column(Integer, nullable=True)
+
+    move_in_date = Column(Date, nullable=True)
+    lease_length = Column(PGEnum(LeaseLengthEnum, name="lease_length_enum"), nullable=True)
+
+    # Wake/Clean/Noise
+    wake_time = Column(PGEnum(WakeTimeEnum, name="wake_time_enum"), nullable=True)
+    cleanliness = Column(PGEnum(CleanlinessEnum, name="cleanliness_enum"), nullable=True)
+    noise_tolerance = Column(PGEnum(NoiseToleranceEnum, name="noise_tolerance_enum"), nullable=True)
+
+    # Interests
+    interests = Column(ARRAY(Text), nullable=False, server_default="{}")
+
+    # Dealbreakers
+    dealbreakers = Column(
+        ARRAY(PGEnum(DealbreakerEnum, name="dealbreaker_enum")),
         nullable=False,
-        server_default="{}"
+        server_default="{}",
     )
-    study_habits = Column(
-        ARRAY(PGEnum(HousingTypeEnum, name="studyhabitsenum")), nullable=False, server_default="{}"
+
+    # Lifestyle Personality
+    cooking_frequency = Column(
+        PGEnum(CookingFrequencyEnum, name="cooking_frequency_enum"), nullable=True
     )
-    sleep_schedule = Column(PGEnum(SleepScheduleEnum))
+    pet_preference = Column(PGEnum(PetPreferenceEnum, name="pet_preference_enum"), nullable=True)
+    guests_frequency = Column(
+        PGEnum(GuestsFrequencyEnum, name="guests_frequency_enum"), nullable=True
+    )
+    roommate_closeness = Column(
+        PGEnum(RoommateClosenessEnum, name="roommate_closeness_enum"), nullable=True
+    )
 
-    # interests/compatibility
-    interests = Column(JSONB)
-    personality_traits = Column(JSONB)
-    deal_breakers = Column(JSONB)  # smoking, pets, etc
+    # On-campus flow
+    on_campus_locations = Column(
+        ARRAY(PGEnum(OnCampusLocationEnum, name="on_campus_location_enum")),
+        nullable=False,
+        server_default="{}",
+    )
+    # asked on on-campus page
+    honors = Column(Boolean, nullable=True)
 
-    # ai processing
-    ai_summary = Column(Text)
-    compatibility_vector = Column(JSON)
-    tags = Column(JSONB)
+    # only relevant if freshman_dorms selected
+    llc_interest = Column(Boolean, nullable=True)
 
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
-    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+    # relevant for UV/CC/Northside
+    num_roommates = Column(PGEnum(NumRoommatesEnum, name="num_roommates_enum"), nullable=True)
 
-    user = relationship("User", backref="survey")
+    # Off-campus lease flow
+    have_lease = Column(Boolean, nullable=True)
+    have_lease_length = Column(
+        PGEnum(HaveLeaseLengthEnum, name="have_lease_length_enum"), nullable=False
+    )
+
+    # Catch-all for any future screens/edge fields
+    answers = Column(
+        JSONB,
+        nullable=False,
+        server_default=text("'{}'::jsonb"),
+    )
+
+    created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
+    updated_at = Column(
+        DateTime(timezone=True), nullable=False, server_default=func.now(), onupdate=func.now()
+    )
+
+    user = relationship("User", back_populates="survey", uselist=False)
