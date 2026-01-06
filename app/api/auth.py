@@ -12,7 +12,7 @@ from firebase_admin import auth
 
 from app.database import get_db
 from app.models.user import User, UserRequestVerify, UserCompleteVerify, UserResetPassword
-from app.models.verification_codes import VerificationCodes, CODE_TYPE_ENUM
+from app.models.verification_codes import VerificationCodes, CodeType
 from app.utils.firebase_auth import get_current_user, get_firebase_user
 from app.utils.email import send_verification_email
 from app.schemas.user import UserCreate, UserResponse, UserSurveyResponse
@@ -41,7 +41,7 @@ async def get_firebase_and_uid(email: str = None, uid: str = None):
 
 def create_verification_code(db: Session, uid: str, purpose: str) -> str:
     code = str(random.randint(100000, 999999))
-    code_type = CODE_TYPE_ENUM.PWD_RESET_CODE if purpose == "reset" else CODE_TYPE_ENUM.ACC_VERIFICATION_CODE
+    code_type = CodeType.PWD_RESET_CODE if purpose == "reset" else CodeType.ACC_VERIFICATION_CODE
 
     new_code = VerificationCodes(user_id=uid, code=code, type=code_type)
     try:
@@ -67,7 +67,7 @@ def verify_code(db: Session, uid: str, code: str, purpose: str, consume: bool = 
     :param purpose: Either `reset` for password reset or `verify` for email verification
     :param consume: Whether to delete the code from the DB after the check (defaults to False)
     """
-    code_type = CODE_TYPE_ENUM.PWD_RESET_CODE if purpose == "reset" else CODE_TYPE_ENUM.ACC_VERIFICATION_CODE
+    code_type = CodeType.PWD_RESET_CODE if purpose == "reset" else CodeType.ACC_VERIFICATION_CODE
 
     code_obj = db.query(VerificationCodes) \
         .filter(VerificationCodes.user_id == uid, VerificationCodes.type == code_type) \
