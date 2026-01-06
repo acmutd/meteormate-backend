@@ -1,6 +1,8 @@
 # Created by Ryan Polasky | 1/5/26
 # ACM MeteorMate | All Rights Reserved
 
+from enum import Enum
+
 from sqlalchemy import Column, Boolean, DateTime, Text, ForeignKey, func, Integer
 from sqlalchemy.dialects import postgresql
 from sqlalchemy.dialects.postgresql import ENUM as PGEnum
@@ -11,9 +13,11 @@ CODE_TYPE_ENUM = PGEnum(
     'pwd_reset_code', 'acc_verification_code', name='code_type_enum', create_type=True
 )
 
+
 class CodeType(Enum):
     PWD_RESET_CODE = "pwd_reset_code"
     ACC_VERIFICATION_CODE = "acc_verification_code"
+
 
 class VerificationCodes(Base):
     __tablename__ = "verification_codes"
