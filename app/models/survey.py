@@ -43,6 +43,62 @@ class SleepScheduleEnum(str, enum.Enum):
     FLEXIBLE = "flexible"
 
 
+class CookingFrequencyEnum(str, enum.Enum):
+    NEVER = "never"
+    RARELY = "rarely"
+    OFTEN = "often"
+
+
+class PetPreferenceEnum(str, enum.Enum):
+    NOT_OKAY = "not_okay"
+    OKAY = "okay"
+    HAVE_A_PET = "have_a_pet"
+
+
+class RoomateClosenessEnum(str, enum.Enum):
+    NOT_CLOSE = "not_close"
+    FRIENDS = "friends"
+    CLOSE_FRIENDS = "close_friends"
+
+
+class HousingLocationEnum(str, enum.Enum):
+    UV = "UV"
+    CC = "CC"
+    FD = "FD"
+
+
+class HonorsEnum(str, enum.Enum):
+    YES = "yes"
+    NO = "no"
+
+
+class LLCEnum(str, enum.Enum):
+    YES = "yes"
+    NO = "no"
+
+
+class HaveALeaseEnum(str, enum.Enum):
+    YES = "yes"
+    NO = "no"
+
+
+class RoomateLengthEnum(str, enum.Enum):
+    TEMP = "temp"
+    LONG_TERM = "long_term"
+
+
+class NumOfRoomatesEnum(str, enum.Enum):
+    NO_PREFERENCE = "no_preference"
+    ONE = "one"
+    TWO = "two"
+    THREE = "three"
+
+
+class DontHaveALeaseEnum(str, enum.Enum):
+    RENT = "rent"
+    LEASE = "lease"
+
+
 class Survey(Base):
     __tablename__ = "surveys"
 

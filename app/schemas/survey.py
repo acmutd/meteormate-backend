@@ -5,7 +5,9 @@ from pydantic import BaseModel
 from typing import Optional, List
 from datetime import datetime
 from app.models.survey import (
-    HousingTypeEnum, LeaseLengthEnum, GuestsFrequencyEnum, StudyHabitsEnum, SleepScheduleEnum
+    HousingTypeEnum, LeaseLengthEnum, GuestsFrequencyEnum, StudyHabitsEnum, SleepScheduleEnum,
+    CookingFrequencyEnum, PetPreferenceEnum, RoomateClosenessEnum, HousingLocationEnum, HonorsEnum,
+    LLCEnum, HaveALeaseEnum, NumOfRoomatesEnum, DontHaveALeaseEnum
 )
 
 
@@ -14,6 +16,16 @@ class SurveyCreate(BaseModel):
     lease_length: List[LeaseLengthEnum]
     guests_frequency: List[GuestsFrequencyEnum]
     study_habits: List[StudyHabitsEnum]
+
+    cooking_frequency: CookingFrequencyEnum
+    pet_preference: PetPreferenceEnum
+    roomate_closseness: RoomateClosenessEnum
+    housing_location: HousingLocationEnum
+    honors: HonorsEnum
+    llc: LLCEnum
+    have_a_lease: HaveALeaseEnum
+    num_of_roomates: NumOfRoomatesEnum
+    dont_have_a_lease: DontHaveALeaseEnum
 
     sleep_schedule: SleepScheduleEnum
 
@@ -34,6 +46,16 @@ class SurveyUpdate(BaseModel):
     study_habits: Optional[List[StudyHabitsEnum]] = None
     sleep_schedule: Optional[SleepScheduleEnum] = None
 
+    cooking_frequency: CookingFrequencyEnum = None
+    pet_preference: PetPreferenceEnum = None
+    roomate_closseness: RoomateClosenessEnum = None
+    housing_location: HousingLocationEnum = None
+    honors: HonorsEnum = None
+    llc: LLCEnum = None
+    have_a_lease: HaveALeaseEnum = None
+    num_of_roomates: NumOfRoomatesEnum = None
+    dont_have_a_lease: DontHaveALeaseEnum = None
+
     budget_min: Optional[int] = None
     budget_max: Optional[int] = None
     move_in_date: Optional[datetime] = None
@@ -51,6 +73,17 @@ class SurveyResponse(BaseModel):
     lease_length: List[LeaseLengthEnum]
     guests_frequency: List[GuestsFrequencyEnum]
     study_habits: List[StudyHabitsEnum]
+
+    cooking_frequency: CookingFrequencyEnum
+    pet_preference: PetPreferenceEnum
+    roomate_closseness: RoomateClosenessEnum
+    housing_location: HousingLocationEnum
+    honors: HonorsEnum
+    llc: LLCEnum
+    have_a_lease: HaveALeaseEnum
+    num_of_roomates: NumOfRoomatesEnum
+    dont_have_a_lease: DontHaveALeaseEnum
+
     sleep_schedule: SleepScheduleEnum
 
     budget_min: int
