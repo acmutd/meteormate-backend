@@ -7,6 +7,7 @@ import logging
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
+from sqlalchemy.exc import SQLAlchemyError
 from firebase_admin import auth
 
 from app.database import get_db
@@ -43,12 +44,18 @@ def create_verification_code(db: Session, uid: str, purpose: str) -> str:
     code_type = CODE_TYPE_ENUM.PWD_RESET_CODE if purpose == "reset" else CODE_TYPE_ENUM.ACC_VERIFICATION_CODE
 
     new_code = VerificationCodes(user_id=uid, code=code, type=code_type)
-    db.add(new_code)
-    db.commit()
+    try:
+        db.add(new_code)
+        db.commit()
+        logger.info(f"User {uid} created a verification code for purpose {purpose}")
+        return code
 
-    logger.info(f"User {uid} created a verification code for purpose {purpose}")
-
-    return code
+    except SQLAlchemyError as e:
+        db.rollback()
+        logger.error(f"DB Error creating code for User {uid}: {str(e)}")
+        raise HTTPException(
+            status_code=500, detail="Internal server error creating verification code"
+        )
 
 
 def verify_code(db: Session, uid: str, code: str, purpose: str, consume: bool = False):
@@ -62,10 +69,10 @@ def verify_code(db: Session, uid: str, code: str, purpose: str, consume: bool = 
     """
     code_type = CODE_TYPE_ENUM.PWD_RESET_CODE if purpose == "reset" else CODE_TYPE_ENUM.ACC_VERIFICATION_CODE
 
-    code_obj = db.query(VerificationCodes)\
-                 .filter(VerificationCodes.user_id == uid, VerificationCodes.type == code_type)\
-                 .order_by(VerificationCodes.created_at.desc())\
-                 .first()
+    code_obj = db.query(VerificationCodes) \
+        .filter(VerificationCodes.user_id == uid, VerificationCodes.type == code_type) \
+        .order_by(VerificationCodes.created_at.desc()) \
+        .first()
 
     if not code_obj:
         logger.warning(
@@ -80,11 +87,16 @@ def verify_code(db: Session, uid: str, code: str, purpose: str, consume: bool = 
         raise HTTPException(status_code=400, detail="Invalid verification code")
 
     if consume:
-        db.delete(code_obj)
-        db.commit()
-        logger.info(
-            f"User {uid}'s verification code with purpose '{purpose}' was deleted from the DB"
-        )
+        try:
+            db.delete(code_obj)
+            db.commit()
+            logger.info(
+                f"User {uid}'s verification code with purpose '{purpose}' was deleted from the DB"
+            )
+        except SQLAlchemyError as e:
+            db.rollback()
+            logger.error(f"DB Error consuming code for User {uid}: {str(e)}")
+            raise HTTPException(status_code=500, detail="Internal server error processing code")
 
 
 @router.post("/register", response_model=UserResponse)
@@ -128,14 +140,20 @@ async def register_user(user_data: UserCreate, db: Session = Depends(get_db)):
 async def get_current_user_profile(
     current_user_token=Depends(get_current_user), db: Session = Depends(get_db)
 ):
-    uid = current_user_token.get("uid")
-    user = db.query(User).filter(User.id == uid).first()
-    if not user:
-        logger.warning(f"/me was requested, but the provided user does not exist")
-        raise HTTPException(status_code=404, detail="User not found")
-    survey = db.query(Survey).filter(Survey.user_id == uid).first()
-    logger.info(f"User {uid} requested /me")
-    return {"user": user, "survey": survey or None}
+    try:
+        uid = current_user_token.get("uid")
+
+        user = db.query(User).filter(User.id == uid).first()
+        if not user:
+            logger.warning(f"/me was requested, but the provided user does not exist")
+            raise HTTPException(status_code=404, detail="User not found")
+        survey = db.query(Survey).filter(Survey.user_id == uid).first()
+        logger.info(f"User {uid} requested /me")
+        return {"user": user, "survey": survey or None}
+
+    except SQLAlchemyError as e:
+        logger.error(f"Database error fetching profile for User {uid}: {str(e)}")
+        raise HTTPException(status_code=500, detail="Database error")
 
 
 @router.post("/send-verification-code")
@@ -159,7 +177,7 @@ async def send_verification_code(request: UserRequestVerify, db: Session = Depen
         return {"message": "Verification code sent to email"}
     except Exception as e:
         logger.error(f"There was an error sending an email to User {uid}: {str(e)}")
-        return {"message": "Failed to sent verification code"}
+        raise HTTPException(status_code=500, detail="Failed to send verification code")
 
 
 # this is called immediately upon user trying to reset password but NO "new password" is asked for/received
@@ -176,15 +194,19 @@ async def verify_reset_code(request: UserCompleteVerify, db: Session = Depends(g
 async def reset_password(request: UserResetPassword, db: Session = Depends(get_db)):
     _, uid = await get_firebase_and_uid(email=request.email)
     # code gets verified a second time, consuming it this time
-    verify_code(db, uid, request.code, purpose="reset", consume=True)  # delete the code after use
+    verify_code(db, uid, request.code, purpose="reset")  # don't delete the code after use
 
     try:
         auth.update_user(uid, password=request.new_password)
     except Exception as e:
-        logging.error(f"There was an error updating User {uid}'s password: {str(e)}")
+        logger.error(f"There was an error updating User {uid}'s password: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Error updating password")
 
-    logging.info(f"User {uid} successfully updated their password")
+    # we eat the code AFTER Firebase runs w/o a hitch to avoid invalidating the code
+    # after an unsuccessful attempt
+    verify_code(db, uid, request.code, purpose="reset", consume=True)
+
+    logger.info(f"User {uid} successfully updated their password")
     return {"message": "Password updated successfully"}
 
 
@@ -208,8 +230,14 @@ async def verify_email(request: UserCompleteVerify, db: Session = Depends(get_db
 
 @router.post("/activity-ping")
 def activity_ping(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
-    current_user.updated_at = datetime.utcnow()
-    current_user.inactivity_notification_stage = None
-    db.commit()
-    logger.info(f"User {current_user.id} updated last login")
-    return {"status": "ok"}
+    try:
+        current_user.updated_at = datetime.utcnow()
+        current_user.inactivity_notification_stage = None
+        db.commit()
+        logger.info(f"User {current_user.id} updated last login")
+        return {"status": "ok"}
+
+    except SQLAlchemyError as e:
+        db.rollback()
+        logger.error(f"Failed to update activity for User {current_user.id}: {str(e)}")
+        raise HTTPException(status_code=500, detail="Database error during activity ping")
