@@ -11,6 +11,9 @@ CODE_TYPE_ENUM = PGEnum(
     'pwd_reset_code', 'acc_verification_code', name='code_type_enum', create_type=True
 )
 
+class CodeType(Enum):
+    PWD_RESET_CODE = "pwd_reset_code"
+    ACC_VERIFICATION_CODE = "acc_verification_code"
 
 class VerificationCodes(Base):
     __tablename__ = "verification_codes"
