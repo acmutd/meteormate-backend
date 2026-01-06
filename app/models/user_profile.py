@@ -27,8 +27,6 @@ CLASSIFICATION_ENUM = PGEnum(
     create_type=True
 )
 
-HOUSING_INTENT = postgresql.ENUM('on', 'off', 'both', name='housing_intent_enum', create_type=True)
-
 
 class UserProfile(Base):
     __tablename__ = "user_profiles"
@@ -38,7 +36,6 @@ class UserProfile(Base):
     gender = Column(GENDER_ENUM)
     major = Column(Text)
     classification = Column(CLASSIFICATION_ENUM)
-    housing_intent = Column(HOUSING_INTENT, nullable=False, server_default='both')
     llc = Column(Boolean)
     bio = Column(Text)
     profile_picture_url = Column(Text)
