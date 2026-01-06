@@ -23,14 +23,14 @@ async def get_potential_matches(
     # check if user has completed survey
     user_survey = db.query(Survey).filter(Survey.user_id == current_user_token["id"]).first()
     if not user_survey:
-        logger.error(f"STATUS 400 - User ID {current_user_token["id"]} did not do their survey")
+        logger.warning(f"STATUS 400 - User with Firebase UID {current_user_token["id"]} did not do their survey")
         raise HTTPException(status_code=400, detail="Complete your survey first")
-    logger.info(f"Successfully found survey for User ID {current_user_token["id"]} in \"Survey\" database")
+    logger.info(f"Successfully found survey for User with Firebase UID {current_user_token["id"]} in \"Survey\" database")
 
     matching_service = MatchingService(db)
     matches = await matching_service.find_potential_matches(current_user_token["id"], limit)
     
-    logger.info(f"Successfully found the following matches for User ID {current_user_token["id"]} - {json.dumps(matches, indent=4)}")
+    logger.info(f"Successfully found matches for User with Firebase UID {current_user_token["id"]}")
 
     return {"matches": matches}
 
@@ -44,7 +44,7 @@ async def like_user(
     matching_service = MatchingService(db)
     result = await matching_service.like_user(current_user_token["id"], target_user_id)
     
-    logger.info(f"User ID {current_user_token["id"]} successfully liked target User ID {target_user_id} - Result: {json.dumps(result, indent=4)}")
+    logger.info(f"User with Firebase UID {current_user_token["id"]} successfully liked target User with Firebase UID {target_user_id}")
 
     return result
 
@@ -58,7 +58,7 @@ async def pass_user(
     matching_service = MatchingService(db)
     result = await matching_service.pass_user(current_user_token["id"], target_user_id)
     
-    logger.info(f"User ID {current_user_token["id"]} successfully passed target User ID {target_user_id} - Result: {json.dumps(result, indent=4)}")
+    logger.info(f"User with Firebase UID {current_user_token["id"]} successfully passed target User with Firebase UID {target_user_id}")
 
     return result
 
@@ -70,6 +70,6 @@ async def get_mutual_matches(
     matching_service = MatchingService(db)
     matches = await matching_service.get_mutual_matches(current_user_token["id"])
 
-    logger.info(f"Successfully found the following mutual matches for User ID {current_user_token["id"]} - {json.dumps(matches, indent=4)}")
+    logger.info(f"Successfully found mutual matches for User with Firebase UID {current_user_token["id"]}")
 
     return {"matches": matches}

@@ -24,33 +24,19 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-def setup_logging(file_name: str = "app.log"):
-    logger = logging.getLogger() # root logger
-    logger.setLevel(logging.INFO)
-
-    if not logger.handlers:
-        # handler for printing logs to console/terminal
-        console_handler = logging.StreamHandler(file_name)
-        # handler for writing logs to file
-        file_handler = logging.FileHandler()
-
-        fmt = logging.Formatter("%(name)s - %(levelname)s - %(message)s")
-        console_handler.setFormatter(fmt)
-        file_handler.setFormatter(fmt)
-
-        logger.addHandler(console_handler)
-        logger.addHandler(file_handler)
-
-
-setup_logging()
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    filename='app_log.log',  # The file you want to write to
+    filemode='a'             # 'a' for append, 'w' to overwrite each time
+)
 logger = logging.getLogger(__name__)
 
 @app.middleware("http")
 async def log_requests(request: Request, call_next):
+    logger.info(f"Executing {request.method} {request.url.path}")
     response = await call_next(request)
-    # log the metadata associated with each request
-    logger.info("{request.method} {request.url.path} - Completed with status {response.status_code}")
-    logger.info(json.dumps(response.headers, indent=4)) # use JSON format instead of multi-line logs for readibility even on other logging platforms
+    logger.info(f"{request.method} {request.url.path} - Completed with status {response.status_code}")
 
 
 @app.exception_handler(RequestValidationError)
