@@ -1,12 +1,15 @@
 # Created by Ryan Polasky | 7/12/25
 # ACM MeteorMate | All Rights Reserved
 
+import logging
+from typing import List, Dict
+
 from sqlalchemy.orm import Session
 from app.models.user import User
 from app.models.survey import Survey
 from app.models.matches import Match
-from typing import List, Dict
-import math
+
+logger = logging.getLogger("meteormate." + __name__)
 
 
 class MatchingService:
@@ -15,9 +18,12 @@ class MatchingService:
         self.db = db
 
     async def find_potential_matches(self, user_id: str, limit: int = 10) -> List[Dict]:
+        logger.info(f"Finding potential matches for User {user_id}")
+
         # get user's survey
         user_survey = self.db.query(Survey).filter(Survey.user_id == user_id).first()
         if not user_survey:
+            logger.warning(f"User {user_id} has no survey, returning 0 matches")
             return []
 
         # get IDs of users already passed/matched
@@ -37,18 +43,16 @@ class MatchingService:
         for survey in other_surveys:
             compatibility_score = self._calculate_compatibility(user_survey, survey)
 
-            # get user info
-            user = self.db.query(User).filter(User.firebase_uid == survey.user_id).first()
+            user = self.db.query(User).filter(User.id == survey.user_id).first()
+
+            if not user:
+                continue
 
             matches.append({
                 "user": {
-                    "firebase_uid": user.firebase_uid,
-                    "username": user.username,
+                    "uid": user.id,
                     "first_name": user.first_name,
                     "last_name": user.last_name,
-                    "age": user.age,
-                    "bio": user.bio,
-                    "profile_picture_url": user.profile_picture_url
                 },
                 "survey": {
                     "housing_type": survey.housing_type,
@@ -63,6 +67,8 @@ class MatchingService:
 
         # sort by compatibility score
         matches.sort(key=lambda x: x["compatibility_score"], reverse=True)
+
+        logger.info(f"Found {len(matches)} potential matches for User {user_id}")
         return matches[:limit]
 
     def _calculate_compatibility(self, user_survey: Survey, other_survey: Survey) -> float:
