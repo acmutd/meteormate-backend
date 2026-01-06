@@ -65,8 +65,8 @@ async def register_user(
             if 'firebase_user' in locals():
                 auth.delete_user(firebase_user.uid)
         except:
-            pass
-        raise HTTPException(status_code=500, detail=f"Error creating user: {str(e)}")
+            print(str(e))
+            raise HTTPException(status_code=500, detail=f"Error creating user")
 
 
 @router.get("/me", response_model=UserSurveyResponse)
@@ -90,7 +90,6 @@ async def get_current_user_profile(
 @router.post("/send-verification-code")
 async def send_verification_code(request: UserRequestVerify, ):
     """Send 6-digit verification code to user's email"""
-
     email_str = str(request.email)
 
     try:
@@ -101,7 +100,8 @@ async def send_verification_code(request: UserRequestVerify, ):
     except auth.UserNotFoundError:
         raise HTTPException(status_code=404, detail="User not found")
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error fetching user: {str(e)}")
+        print(str(e))
+        raise HTTPException(status_code=500, detail=f"Error fetching user")
 
     # Only block if this is for signup email verification
     if request.purpose == "verify" and firebase_user.email_verified:
@@ -129,7 +129,8 @@ async def verify_reset_code(request: UserCompleteVerify):
     except auth.UserNotFoundError:
         raise HTTPException(status_code=404, detail="User not found")
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error fetching user: {str(e)}")
+        print(str(e))
+        raise HTTPException(status_code=500, detail=f"Error fetching user")
 
     stored_code = verification_codes.get(uid)
     if not stored_code:
@@ -144,7 +145,6 @@ async def verify_reset_code(request: UserCompleteVerify):
 @router.post("/reset-password")
 async def reset_password(request: UserResetPassword):
     """Reset password using email + 6-digit code"""
-
     email_str = str(request.email)
 
     try:
@@ -153,7 +153,8 @@ async def reset_password(request: UserResetPassword):
     except auth.UserNotFoundError:
         raise HTTPException(status_code=404, detail="User not found")
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error fetching user: {str(e)}")
+        print(str(e))
+        raise HTTPException(status_code=500, detail=f"Error fetching user")
 
     stored_code = verification_codes.get(uid)
     if not stored_code:
@@ -164,7 +165,8 @@ async def reset_password(request: UserResetPassword):
     try:
         auth.update_user(uid, password=request.new_password)
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error updating password: {str(e)}")
+        print(str(e))
+        raise HTTPException(status_code=500, detail=f"Error updating password")
 
     del verification_codes[uid]
 
@@ -180,6 +182,7 @@ async def verify_email(request: UserCompleteVerify):
         firebase_user = auth.get_user_by_email(request.email)
         uid = firebase_user.uid
     except Exception as e:
+        print(str(e))
         raise HTTPException(status_code=404, detail="User not found")
 
     # get code from memory
@@ -196,7 +199,8 @@ async def verify_email(request: UserCompleteVerify):
     try:
         auth.update_user(uid, email_verified=True)
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error updating user: {str(e)}")
+        print(str(e))
+        raise HTTPException(status_code=500, detail=f"Error updating user")
 
     # Delete code after successful verification
     del verification_codes[uid]
