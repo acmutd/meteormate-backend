@@ -27,9 +27,6 @@ class User(Base):
     id = Column(Text, primary_key=True, index=True)
     utd_id = Column(Text, unique=True, index=True)
     email = Column(Text, unique=True, index=True)
-    first_name = Column(Text)
-    last_name = Column(Text)
-    birthdate = Column(Date)
 
     # behind-the-scenes stuff
     is_active = Column(Boolean, nullable=False, server_default='true', default=True)
@@ -43,20 +40,6 @@ class User(Base):
     survey = relationship(
         "Survey", back_populates="user", uselist=False, cascade="all, delete-orphan"
     )
-
-    # compute age
-    @hybrid_property
-    def age(self):
-        if not self.birthdate:
-            return None
-        today = date.today()
-        return today.year - self.birthdate.year - ((today.month, today.day)
-                                                   < (self.birthdate.month, self.birthdate.day))
-
-    @age.expression
-    def age(cls):
-        return func.extract('year', func.age(func.current_date(),
-                                             cls.birthdate)).cast(postgresql.INTEGER)
 
 
 class UserRequestVerify(BaseModel):

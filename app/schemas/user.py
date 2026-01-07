@@ -7,16 +7,11 @@ from pydantic import BaseModel, Field, computed_field, field_validator
 
 from app.schemas.survey import SurveyResponse
 
-HousingIntent = Literal["on", "off", "both"]
-
 
 class UserCreate(BaseModel):
     email: str
     password: str
     utd_id: str
-    first_name: str
-    last_name: str
-    birthdate: Optional[date] = None
 
     @field_validator('email')
     def validate_utd_email(cls, v):
@@ -32,10 +27,6 @@ class UserResponse(BaseModel):
     id: str
     utd_id: str
     email: str
-    first_name: str
-    last_name: str
-    age: Optional[int] = None
-    birthdate: Optional[date] = None
     created_at: datetime
 
     class Config:

@@ -1,7 +1,7 @@
 # Created by Ryan Polasky | 9/20/25
 # ACM MeteorMate | All Rights Reserved
 
-from sqlalchemy import Column, Boolean, DateTime, Text, ForeignKey, func
+from sqlalchemy import Column, Boolean, DateTime, Text, ForeignKey, func, Numeric
 from sqlalchemy.dialects import postgresql
 from sqlalchemy.dialects.postgresql import ENUM as PGEnum
 from sqlalchemy.ext.hybrid import hybrid_property
@@ -36,9 +36,13 @@ class UserProfile(Base):
     gender = Column(GENDER_ENUM)
     major = Column(Text)
     classification = Column(CLASSIFICATION_ENUM)
-    llc = Column(Boolean)
     bio = Column(Text)
     profile_picture_url = Column(Text)
+
+    # moved from user table
+    first_name = Column(Text)
+    last_name = Column(Text)
+    age = Column(Numeric)
 
     # behind-the-scenes stuff
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)

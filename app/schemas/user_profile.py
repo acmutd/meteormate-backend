@@ -14,9 +14,11 @@ class UserProfileCreate(BaseModel):
     gender: Optional[Gender] = None
     major: Optional[str] = None
     classification: Optional[Classification] = None
-    llc: Optional[bool] = None
     bio: Optional[str] = None
     profile_picture_url: Optional[str] = None
+    first_name: str
+    last_name: str
+    age: int
 
     class Config:
         from_attributes = True
@@ -26,9 +28,11 @@ class UserProfileUpdate(BaseModel):
     gender: Optional[Gender] = None
     major: Optional[str] = None
     classification: Optional[Classification] = None
-    llc: Optional[bool] = None
     bio: Optional[str] = None
     profile_picture_url: Optional[str] = None
+    first_name: str
+    last_name: str
+    age: int
 
     class Config:
         from_attributes = True
@@ -39,9 +43,11 @@ class UserProfileResponse(BaseModel):
     gender: Optional[Gender] = None
     major: Optional[str] = None
     classification: Optional[Classification] = None
-    llc: Optional[bool] = None
     created_at: datetime
     updated_at: datetime
+    first_name: str
+    last_name: str
+    age: int
 
     class Config:
         from_attributes = True
