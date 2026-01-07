@@ -110,14 +110,13 @@ async def register_user(user_data: UserCreate, db: Session = Depends(get_db)):
         firebase_user = auth.create_user(
             email=user_data.email, password=user_data.password, email_verified=False
         )
+
         new_user = User(
             id=firebase_user.uid,
             email=user_data.email,
-            first_name=user_data.first_name,
-            last_name=user_data.last_name,
-            birthdate=user_data.birthdate,
             utd_id=user_data.utd_id,
         )
+
         db.add(new_user)
         db.commit()
         db.refresh(new_user)
