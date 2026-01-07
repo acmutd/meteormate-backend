@@ -7,7 +7,7 @@ from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 
 from app.database import get_db
 from app.models.user_profile import UserProfile
-from app.schemas.user_profile import UserProfileCreate
+from app.schemas.user_profile import UserProfileCreate, UserProfileResponse
 from app.utils.firebase_auth import get_current_user
 
 logger = logging.getLogger("meteormate." + __name__)
@@ -15,7 +15,7 @@ logger = logging.getLogger("meteormate." + __name__)
 router = APIRouter()
 
 
-@router.post('/create')
+@router.post('/create', response_model=UserProfileResponse)
 async def create_user_profile(
     profile_data: UserProfileCreate,
     current_user_token=Depends(get_current_user),
