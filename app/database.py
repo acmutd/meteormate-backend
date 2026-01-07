@@ -2,6 +2,7 @@
 # ACM MeteorMate | All Rights Reserved
 
 import logging
+import enum as py_enum
 
 from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
@@ -9,6 +10,15 @@ from sqlalchemy.orm import sessionmaker
 from app.config import settings
 
 logger = logging.getLogger("meteormate." + __name__)
+
+
+def to_db(v):
+    if isinstance(v, py_enum.Enum):
+        return v.value
+    if isinstance(v, list):
+        return [to_db(x) for x in v]
+    return v
+
 
 try:
     logger.info("Initializing database connection...")

@@ -7,7 +7,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import SQLAlchemyError
 
-from app.database import get_db
+from app.database import get_db, to_db
 from app.models.survey import Survey
 from app.models.user import User
 from app.schemas.survey import SurveyCreate, SurveyResponse, SurveyUpdate
@@ -38,7 +38,7 @@ async def create_survey(
             logger.warning(f"User {uid} attempted to create a duplicate survey")
             raise HTTPException(status_code=400, detail="Survey already exists")
 
-        payload = survey_data.model_dump()
+        payload = {k: to_db(v) for k, v in survey_data.model_dump().items()}
         new_survey = Survey(user_id=uid, **payload)
 
         db.add(new_survey)
