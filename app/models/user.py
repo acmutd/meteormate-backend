@@ -1,5 +1,6 @@
 # Created by Ryan Polasky | 7/12/25
 # ACM MeteorMate | All Rights Reserved
+
 import enum
 from datetime import date
 from typing import Optional
@@ -8,6 +9,8 @@ from pydantic import BaseModel, EmailStr
 from sqlalchemy import Column, Boolean, DateTime, Text, Date, func, Enum
 from sqlalchemy.dialects import postgresql
 from sqlalchemy.ext.hybrid import hybrid_property
+from sqlalchemy.orm import relationship
+
 from app.database import Base
 from typing import Optional, Literal
 
@@ -36,6 +39,10 @@ class User(Base):
     )
     inactivity_notification_stage = Column(Enum(InactivityStage), nullable=True)
     last_inactivity_notification_sent_at = Column(DateTime, nullable=True)
+
+    survey = relationship(
+        "Survey", back_populates="user", uselist=False, cascade="all, delete-orphan"
+    )
 
     # compute age
     @hybrid_property
