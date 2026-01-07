@@ -5,6 +5,7 @@ from sqlalchemy import Column, Boolean, DateTime, Text, ForeignKey, func, Numeri
 from sqlalchemy.dialects import postgresql
 from sqlalchemy.dialects.postgresql import ENUM as PGEnum
 from sqlalchemy.ext.hybrid import hybrid_property
+from sqlalchemy.orm import relationship
 from app.database import Base
 
 GENDER_ENUM = PGEnum(
@@ -49,3 +50,5 @@ class UserProfile(Base):
     updated_at = Column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False
     )
+
+    user = relationship("User", back_populates="profile", uselist=False)
