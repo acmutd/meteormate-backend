@@ -3,13 +3,26 @@
 
 import enum
 
-from sqlalchemy import (Column, Integer, Text, ForeignKey, Date, DateTime, Boolean, text)
-from sqlalchemy import Enum as PGEnum
-from sqlalchemy.dialects.postgresql import JSONB, ARRAY
+from sqlalchemy import (
+    Boolean,
+    Column,
+    Date,
+    DateTime,
+    ForeignKey,
+    Integer,
+    Text,
+    text,
+)
+from sqlalchemy import Enum as SAEnum
+from sqlalchemy.dialects.postgresql import ARRAY, JSONB
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 
 from app.database import Base
+
+
+def mm_enum(enum_cls: type[enum.Enum], name: str) -> SAEnum:
+    return SAEnum(enum_cls, name=name, values_callable=lambda e: [x.value for x in e])
 
 
 # Shared housing enums
@@ -109,64 +122,62 @@ class Survey(Base):
     )
 
     # Core housing fields
-    housing_intent = Column(PGEnum(HousingIntentEnum, name="housing_intent_enum"), nullable=True)
+    housing_intent = Column(mm_enum(HousingIntentEnum, "housing_intent_enum"), nullable=True)
 
     # Sliders (rent/budget)
     budget_min = Column(Integer, nullable=True)
     budget_max = Column(Integer, nullable=True)
 
     move_in_date = Column(Date, nullable=True)
-    lease_length = Column(PGEnum(LeaseLengthEnum, name="lease_length_enum"), nullable=True)
+    lease_length = Column(mm_enum(LeaseLengthEnum, "lease_length_enum"), nullable=True)
 
     # Wake/Clean/Noise
-    wake_time = Column(PGEnum(WakeTimeEnum, name="wake_time_enum"), nullable=True)
-    cleanliness = Column(PGEnum(CleanlinessEnum, name="cleanliness_enum"), nullable=True)
-    noise_tolerance = Column(PGEnum(NoiseToleranceEnum, name="noise_tolerance_enum"), nullable=True)
+    wake_time = Column(mm_enum(WakeTimeEnum, "wake_time_enum"), nullable=True)
+    cleanliness = Column(mm_enum(CleanlinessEnum, "cleanliness_enum"), nullable=True)
+    noise_tolerance = Column(mm_enum(NoiseToleranceEnum, "noise_tolerance_enum"), nullable=True)
 
     # Interests
     interests = Column(ARRAY(Text), nullable=False, server_default="{}")
 
     # Dealbreakers
     dealbreakers = Column(
-        ARRAY(PGEnum(DealbreakerEnum, name="dealbreaker_enum")),
+        ARRAY(mm_enum(DealbreakerEnum, "dealbreaker_enum")),
         nullable=False,
         server_default="{}",
     )
 
-    # Lifestyle Personality
+    # Lifestyle / Personality
     cooking_frequency = Column(
-        PGEnum(CookingFrequencyEnum, name="cooking_frequency_enum"), nullable=True
+        mm_enum(CookingFrequencyEnum, "cooking_frequency_enum"), nullable=True
     )
-    pet_preference = Column(PGEnum(PetPreferenceEnum, name="pet_preference_enum"), nullable=True)
-    guests_frequency = Column(
-        PGEnum(GuestsFrequencyEnum, name="guests_frequency_enum"), nullable=True
-    )
+    pet_preference = Column(mm_enum(PetPreferenceEnum, "pet_preference_enum"), nullable=True)
+    guests_frequency = Column(mm_enum(GuestsFrequencyEnum, "guests_frequency_enum"), nullable=True)
     roommate_closeness = Column(
-        PGEnum(RoommateClosenessEnum, name="roommate_closeness_enum"), nullable=True
+        mm_enum(RoommateClosenessEnum, "roommate_closeness_enum"), nullable=True
     )
 
     # On-campus flow
     on_campus_locations = Column(
-        ARRAY(PGEnum(OnCampusLocationEnum, name="on_campus_location_enum")),
+        ARRAY(mm_enum(OnCampusLocationEnum, "on_campus_location_enum")),
         nullable=False,
         server_default="{}",
     )
+
     # asked on on-campus page
     honors = Column(Boolean, nullable=True)
 
-    # only relevant if freshman_dorms selected
     llc_interest = Column(Boolean, nullable=True)
 
-    # relevant for UV/CC/Northside
-    num_roommates = Column(PGEnum(NumRoommatesEnum, name="num_roommates_enum"), nullable=True)
+    # UV/CC/Northside stuff
+    num_roommates = Column(mm_enum(NumRoommatesEnum, "num_roommates_enum"), nullable=True)
 
     # Off-campus lease flow
     have_lease = Column(Boolean, nullable=True)
     have_lease_length = Column(
-        PGEnum(HaveLeaseLengthEnum, name="have_lease_length_enum"), nullable=False
+        mm_enum(HaveLeaseLengthEnum, "have_lease_length_enum"), nullable=False
     )
 
-    # Catch-all for any future screens/edge fields
+    # Catch-all
     answers = Column(
         JSONB,
         nullable=False,
@@ -175,7 +186,10 @@ class Survey(Base):
 
     created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
     updated_at = Column(
-        DateTime(timezone=True), nullable=False, server_default=func.now(), onupdate=func.now()
+        DateTime(timezone=True),
+        nullable=False,
+        server_default=func.now(),
+        onupdate=func.now(),
     )
 
     user = relationship("User", back_populates="survey", uselist=False)
