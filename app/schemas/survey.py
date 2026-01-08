@@ -66,7 +66,6 @@ class SurveyUpdate(BaseModel):
     budget_min: Optional[int] = None
     budget_max: Optional[int] = None
     move_in_date: Optional[date] = None
-    lease_length: Optional[LeaseLengthEnum] = None
 
     # wake/clean/noise
     wake_time: Optional[WakeTimeEnum] = None
@@ -107,7 +106,6 @@ class SurveyResponse(BaseModel):
     budget_min: Optional[int] = None
     budget_max: Optional[int] = None
     move_in_date: Optional[date] = None
-    lease_length: Optional[LeaseLengthEnum] = None
 
     # wake/clean/noise
     wake_time: Optional[WakeTimeEnum] = None
