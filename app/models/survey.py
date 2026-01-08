@@ -26,12 +26,6 @@ def mm_enum(enum_cls: type[enum.Enum], name: str) -> SAEnum:
 
 
 # Shared housing enums
-class LeaseLengthEnum(str, enum.Enum):
-    SEMESTER = "semester"
-    ACADEMIC = "academic"
-    YEAR = "year"
-
-
 class HousingIntentEnum(str, enum.Enum):
     ON_CAMPUS = "on_campus"
     OFF_CAMPUS = "off_campus"
@@ -129,7 +123,6 @@ class Survey(Base):
     budget_max = Column(Integer, nullable=True)
 
     move_in_date = Column(Date, nullable=True)
-    lease_length = Column(mm_enum(LeaseLengthEnum, "lease_length_enum"), nullable=True)
 
     # Wake/Clean/Noise
     wake_time = Column(mm_enum(WakeTimeEnum, "wake_time_enum"), nullable=True)
@@ -174,7 +167,7 @@ class Survey(Base):
     # Off-campus lease flow
     have_lease = Column(Boolean, nullable=True)
     have_lease_length = Column(
-        mm_enum(HaveLeaseLengthEnum, "have_lease_length_enum"), nullable=False
+        mm_enum(HaveLeaseLengthEnum, "have_lease_length_enum"), nullable=True
     )
 
     # Catch-all

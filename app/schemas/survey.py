@@ -8,7 +8,6 @@ from pydantic import BaseModel
 
 from app.models.survey import (
     HousingIntentEnum,
-    LeaseLengthEnum,
     WakeTimeEnum,
     CleanlinessEnum,
     NoiseToleranceEnum,
@@ -30,7 +29,6 @@ class SurveyCreate(BaseModel):
     budget_min: Optional[int] = None
     budget_max: Optional[int] = None
     move_in_date: Optional[date] = None
-    lease_length: Optional[LeaseLengthEnum] = None
 
     # wake/clean/noise
     wake_time: Optional[WakeTimeEnum] = None
