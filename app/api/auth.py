@@ -15,8 +15,7 @@ from app.models.user import User, UserRequestVerify, UserCompleteVerify, UserRes
 from app.models.verification_codes import VerificationCodes, CodeType
 from app.utils.firebase_auth import get_current_user, get_firebase_user
 from app.utils.email import send_verification_email
-from app.schemas.user import UserCreate, UserResponse, UserSurveyResponse
-from app.models.survey import Survey
+from app.schemas.user import UserCreate, UserResponse
 
 logger = logging.getLogger("meteormate." + __name__)
 
@@ -136,7 +135,7 @@ async def register_user(user_data: UserCreate, db: Session = Depends(get_db)):
         raise HTTPException(status_code=500, detail=f"Error creating user")
 
 
-@router.get("/me", response_model=UserSurveyResponse)
+@router.get("/me", response_model=UserResponse)
 async def get_current_user_profile(
     current_user_token=Depends(get_current_user), db: Session = Depends(get_db)
 ):
@@ -144,12 +143,14 @@ async def get_current_user_profile(
         uid = current_user_token.get("uid")
 
         user = db.query(User).filter(User.id == uid).first()
+
         if not user:
             logger.warning(f"/me was requested, but the provided user does not exist")
             raise HTTPException(status_code=404, detail="User not found")
-        survey = db.query(Survey).filter(Survey.user_id == uid).first()
+
         logger.info(f"User {uid} requested /me")
-        return {"user": user, "survey": survey or None}
+
+        return user
 
     except SQLAlchemyError as e:
         logger.error(f"Database error fetching profile for User {uid}: {str(e)}")
