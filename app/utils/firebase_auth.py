@@ -25,6 +25,9 @@ security = HTTPBearer()
 
 
 async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)):
+    if credentials.credentials == settings.ADMIN_BEARER:
+        return {"id": settings.ADMIN_UID, "uid": settings.ADMIN_UID}
+
     try:
         # verify the firebase token
         decoded_token = auth.verify_id_token(credentials.credentials)
