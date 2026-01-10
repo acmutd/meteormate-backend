@@ -78,7 +78,7 @@ async def create_user_profile(
 
 
 @router.put("/update", response_model=UserProfileResponse)
-async def create_user_profile(
+async def update_user_profile(
     profile_data: UserProfileUpdate,
     current_user_token=Depends(get_current_user),
     db: Session = Depends(get_db),
