@@ -5,7 +5,9 @@ from typing import Optional, Literal
 from datetime import date, datetime
 from pydantic import BaseModel, Field, computed_field, field_validator
 
+from app.models.user import InactivityStage
 from app.schemas.survey import SurveyResponse
+from app.schemas.user_profile import UserProfileResponse
 
 
 class UserCreate(BaseModel):
@@ -13,10 +15,10 @@ class UserCreate(BaseModel):
     password: str
     utd_id: str
 
-    @field_validator('email')
+    @field_validator("email")
     def validate_utd_email(cls, v):
-        if not v.endswith('@utdallas.edu'):
-            raise ValueError('Email must be a valid @utdallas.edu address')
+        if not v.endswith("@utdallas.edu"):
+            raise ValueError("Email must be a valid @utdallas.edu address")
         return v
 
     class Config:
@@ -29,15 +31,18 @@ class UserResponse(BaseModel):
     email: str
     created_at: datetime
 
-    class Config:
-        from_attributes = True
-
-
-class UserSurveyResponse(BaseModel):
-    user: UserResponse
     survey: Optional[SurveyResponse] = None
+    profile: Optional[UserProfileResponse] = None
 
     @computed_field
     @property
     def survey_done(self) -> bool:
         return self.survey is not None
+
+    @computed_field
+    @property
+    def profile_created(self) -> bool:
+        return self.profile is not None
+
+    class Config:
+        from_attributes = True

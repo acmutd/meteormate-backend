@@ -12,7 +12,7 @@ from fastapi.responses import JSONResponse
 
 from app.config import settings
 from app.database import engine, Base
-from app.api import auth, survey, matches, cron
+from app.api import auth, survey, matches, cron, profiles
 
 logger = logging.getLogger("meteormate")
 logger.setLevel(logging.DEBUG)
@@ -63,6 +63,7 @@ app.include_router(auth.router, prefix="/api/auth", tags=["auth"])
 app.include_router(survey.router, prefix="/api/survey", tags=["survey"])
 app.include_router(matches.router, prefix="/api/matches", tags=["matches"])
 app.include_router(cron.router, prefix="/api/cron", tags=["cron"])
+app.include_router(profiles.router, prefix="/api/profiles", tags=["user_profiles"])
 
 
 @app.get("/")
