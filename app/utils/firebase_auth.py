@@ -26,6 +26,8 @@ security = HTTPBearer()
 
 async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)):
     if credentials.credentials == settings.ADMIN_BEARER:
+        if not settings.DEBUG:
+            raise HTTPException(status_code=403, detail="Admin bypass only in DEBUG mode")
         return {"id": settings.ADMIN_UID, "uid": settings.ADMIN_UID}
 
     try:
