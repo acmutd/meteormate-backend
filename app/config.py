@@ -26,5 +26,8 @@ class Settings:
     # cron config (i.e. admin token for cron jobs to perform administrative duties)
     CRON_SECRET: str = config("CRON_SECRET", default="")
 
+    # admin bearer key for testing
+    ADMIN_BEARER: str = config("ADMIN_BEARER", default="")
+
 
 settings = Settings()
