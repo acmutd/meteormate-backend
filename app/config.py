@@ -29,5 +29,8 @@ class Settings:
     # admin bearer key for testing
     ADMIN_BEARER: str = config("ADMIN_BEARER", default="")
 
+    # admin user uid for testing
+    ADMIN_UID: str = config("ADMIN_UID", default="")
+
 
 settings = Settings()
