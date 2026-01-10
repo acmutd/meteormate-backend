@@ -30,10 +30,6 @@ class UserResponse(BaseModel):
     utd_id: str
     email: str
     created_at: datetime
-    updated_at: datetime
-    is_active: bool
-    inactivity_notification_stage: Optional[InactivityStage] = None
-    last_inactivity_notification_sent_at: Optional[datetime] = None
 
     survey: Optional[SurveyResponse] = None
     profile: Optional[UserProfileResponse] = None
