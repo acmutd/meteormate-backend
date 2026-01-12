@@ -40,6 +40,9 @@ class User(Base):
     survey = relationship(
         "Survey", back_populates="user", uselist=False, cascade="all, delete-orphan"
     )
+    profile = relationship(
+        "UserProfile", back_populates="user", uselist=False, cascade="all, delete-orphan"
+    )
 
 
 class UserRequestVerify(BaseModel):
