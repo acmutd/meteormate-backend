@@ -23,6 +23,7 @@ router = APIRouter()
 async def get_potential_matches(
     limit: int = 10, current_user_token=Depends(get_current_user), db: Session = Depends(get_db)
 ):
+    
     uid = current_user_token.get("uid")
     if not uid:
         logger.error("Token missing 'uid' field in /potential request")

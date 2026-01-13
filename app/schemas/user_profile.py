@@ -9,6 +9,13 @@ from validation_config import *
 Gender = Literal["female", "male", "non_binary", "prefer_not_to_say", "other"]
 Classification = Literal["freshman", "sophomore", "junior", "senior", "graduate"]
 
+def validate_name(name, min_len, max_len, position):
+    if name > FIRST_NAME_MAX_LEN or name < FIRST_NAME_MIN_LEN:
+            raise ValueError(f"User's {position} name must be between {min_len} and {max_len} characters (inclusive)")
+    if any(not char.isalpha() for char in name):
+        raise ValueError(f"User's first name cannot contain any numbers or special characters")
+    return name
+
 
 class UserProfileCreate(BaseModel):
     user_id: str
@@ -25,23 +32,19 @@ class UserProfileCreate(BaseModel):
         from_attributes = True
     
     @field_validator("first_name")
-    def validate_first_name(cls, first_name) -> Self:
-        if first_name > FIRST_NAME_MAX_LEN or first_name < FIRST_NAME_MIN_LEN:
-            raise ValueError(f"User's first name must be between {FIRST_NAME_MIN_LEN} and {FIRST_NAME_MAX_LEN} characters (inclusive)")
-        if any(not char.isalpha() for char in first_name):
-            raise ValueError(f"User's first name cannot contain any numbers or special characters")
-        return first_name
+    def validate_first_name(cls, v) -> str:
+        return validate_name(v, FIRST_NAME_MIN_LEN, FIRST_NAME_MAX_LEN)
 
     @field_validator("last_name")
-    def validate_last_name(cls, last_name) -> str:
-        if last_name > LAST_NAME_MAX_LEN or last_name < LAST_NAME_MIN_LEN:
-            raise ValueError(f"User's last name must be between {LAST_NAME_MIN_LEN} and {LAST_NAME_MAX_LEN} characters (inclusive)")
-        if any(not char.isalpha() for char in last_name):
-            raise ValueError(f"User's first name cannot contain any numbers or special characters")
-        return last_name
-
-    @field_validator("gender")
+    def validate_last_name(cls, v) -> str:
+        return validate_name(v, LAST_NAME_MIN_LEN, LAST_NAME_MAX_LEN)
     
+    @field_validator("age")
+    def validate_age(cls, v):
+        if v < 0 or v > 100:
+            raise ValueError(f"User's age must be between {MIN_AGE} and {MAX_AGE} years")
+    
+
 
 
 class UserProfileUpdate(BaseModel):
@@ -56,6 +59,19 @@ class UserProfileUpdate(BaseModel):
 
     class Config:
         from_attributes = True
+    
+    @field_validator("first_name")
+    def validate_first_name(cls, v) -> str:
+        return validate_name(v, FIRST_NAME_MIN_LEN, FIRST_NAME_MAX_LEN)
+
+    @field_validator("last_name")
+    def validate_last_name(cls, v) -> str:
+        return validate_name(v, LAST_NAME_MIN_LEN, LAST_NAME_MAX_LEN)
+    
+    @field_validator("age")
+    def validate_age(cls, v):
+        if v < 0 or v > 100:
+            raise ValueError(f"User's age must be between {MIN_AGE} and {MAX_AGE} years")
 
 
 class UserProfileResponse(BaseModel):
@@ -71,3 +87,16 @@ class UserProfileResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+    @field_validator("first_name")
+    def validate_first_name(cls, v) -> str:
+        return validate_name(v, FIRST_NAME_MIN_LEN, FIRST_NAME_MAX_LEN)
+
+    @field_validator("last_name")
+    def validate_last_name(cls, v) -> str:
+        return validate_name(v, LAST_NAME_MIN_LEN, LAST_NAME_MAX_LEN)
+    
+    @field_validator("age")
+    def validate_age(cls, v):
+        if v < 0 or v > 100:
+            raise ValueError(f"User's age must be between {MIN_AGE} and {MAX_AGE} years")
