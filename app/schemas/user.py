@@ -29,12 +29,6 @@ class UserResponse(BaseModel):
     email: str
     created_at: datetime
 
-    @field_validator('email')
-    def validate_utd_email(cls, v):
-        if not v.endswith('@utdallas.edu'):
-            raise ValueError('Email must be a valid @utdallas.edu address')
-        return v
-
     class Config:
         from_attributes = True
 
