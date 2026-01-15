@@ -52,3 +52,7 @@ class UserProfileResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+class UserProfilePicture(BaseModel):
+    base64: str
