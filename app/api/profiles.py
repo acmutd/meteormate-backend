@@ -1,7 +1,6 @@
 # Created by Atharva Mishra | 1/8/2026
 # ACM MeteorMate | All Rights Reserved
 
-import binascii
 import logging
 
 from fastapi import APIRouter, Depends, HTTPException
