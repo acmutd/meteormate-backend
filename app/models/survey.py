@@ -185,4 +185,7 @@ class Survey(Base):
         onupdate=func.now(),
     )
 
+    smoke_vape = Column(Boolean, nullable=False, server_default=text("false"))
+    drink = Column(Boolean, nullable=False, server_default=text("false"))
+
     user = relationship("User", back_populates="survey", uselist=False)
