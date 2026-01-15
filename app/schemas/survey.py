@@ -58,6 +58,10 @@ class SurveyCreate(BaseModel):
     # catch all
     answers: Dict[str, Any] = {}
 
+    # smoking/vaping/drinking
+    smoke_vape: bool = False
+    drink: bool = False
+
 
 class SurveyUpdate(BaseModel):
     housing_intent: Optional[HousingIntentEnum] = None
@@ -94,6 +98,10 @@ class SurveyUpdate(BaseModel):
 
     # catch all
     answers: Optional[Dict[str, Any]] = None
+
+    # smoking/vaping/drinking
+    smoke_vape: bool = False
+    drink: bool = False
 
 
 class SurveyResponse(BaseModel):
@@ -137,6 +145,10 @@ class SurveyResponse(BaseModel):
 
     created_at: datetime
     updated_at: datetime
+
+    # smoking/vaping/drinking
+    smoke_vape: bool = False
+    drink: bool = False
 
     class Config:
         from_attributes = True
