@@ -1,10 +1,11 @@
 # Created by Ryan Polasky | 9/20/25
 # ACM MeteorMate | All Rights Reserved
 
-from sqlalchemy import Column, Boolean, DateTime, Text, ForeignKey, func
+from sqlalchemy import Column, Boolean, DateTime, Text, ForeignKey, func, Numeric
 from sqlalchemy.dialects import postgresql
 from sqlalchemy.dialects.postgresql import ENUM as PGEnum
 from sqlalchemy.ext.hybrid import hybrid_property
+from sqlalchemy.orm import relationship
 from app.database import Base
 
 GENDER_ENUM = PGEnum(
@@ -17,18 +18,15 @@ GENDER_ENUM = PGEnum(
     create_type=True
 )
 
-CLASS_YEAR_ENUM = PGEnum(
+CLASSIFICATION_ENUM = PGEnum(
     'freshman',
     'sophomore',
     'junior',
     'senior',
     'graduate',
-    'other',
-    name='class_year_enum',
+    name='classification_enum',
     create_type=True
 )
-
-HOUSING_INTENT = postgresql.ENUM('on', 'off', 'both', name='housing_intent_enum', create_type=True)
 
 
 class UserProfile(Base):
@@ -38,11 +36,14 @@ class UserProfile(Base):
 
     gender = Column(GENDER_ENUM)
     major = Column(Text)
-    class_year = Column(CLASS_YEAR_ENUM)
-    housing_intent = Column(HOUSING_INTENT, nullable=False, server_default='both')
-    llc = Column(Boolean)
+    classification = Column(CLASSIFICATION_ENUM)
     bio = Column(Text)
     profile_picture_url = Column(Text)
+
+    # moved from user table
+    first_name = Column(Text)
+    last_name = Column(Text)
+    age = Column(Numeric)
 
     # behind-the-scenes stuff
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
@@ -50,10 +51,4 @@ class UserProfile(Base):
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False
     )
 
-    @hybrid_property
-    def is_freshman(self):
-        return self.class_year == 'freshman'
-
-    @is_freshman.expression
-    def is_freshman(cls):
-        return cls.class_year == 'freshman'
+    user = relationship("User", back_populates="profile", uselist=False)

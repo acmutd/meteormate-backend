@@ -3,23 +3,22 @@
 
 from typing import Optional, Literal
 from datetime import date, datetime
-from pydantic import BaseModel, validator
+from pydantic import BaseModel, Field, computed_field, field_validator
 
-HousingIntent = Literal["on", "off", "both"]
+from app.models.user import InactivityStage
+from app.schemas.survey import SurveyResponse
+from app.schemas.user_profile import UserProfileResponse
 
 
 class UserCreate(BaseModel):
     email: str
     password: str
     utd_id: str
-    first_name: str
-    last_name: str
-    birthdate: Optional[date] = None
 
-    @validator('email')
+    @field_validator("email")
     def validate_utd_email(cls, v):
-        if not v.endswith('@utdallas.edu'):
-            raise ValueError('Email must be a valid @utdallas.edu address')
+        if not v.endswith("@utdallas.edu"):
+            raise ValueError("Email must be a valid @utdallas.edu address")
         return v
 
     class Config:
@@ -30,11 +29,20 @@ class UserResponse(BaseModel):
     id: str
     utd_id: str
     email: str
-    first_name: str
-    last_name: str
-    age: Optional[int] = None
-    birthdate: Optional[date] = None
     created_at: datetime
+
+    survey: Optional[SurveyResponse] = None
+    profile: Optional[UserProfileResponse] = None
+
+    @computed_field
+    @property
+    def survey_done(self) -> bool:
+        return self.survey is not None
+
+    @computed_field
+    @property
+    def profile_created(self) -> bool:
+        return self.profile is not None
 
     class Config:
         from_attributes = True

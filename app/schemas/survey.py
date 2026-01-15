@@ -1,68 +1,142 @@
 # Created by Ryan Polasky | 7/12/25
 # ACM MeteorMate | All Rights Reserved
 
+from datetime import datetime, date
+from typing import Optional, List, Dict, Any
+
 from pydantic import BaseModel
-from typing import Optional, List
-from datetime import datetime
+
 from app.models.survey import (
-    HousingTypeEnum, LeaseLengthEnum, GuestsFrequencyEnum, StudyHabitsEnum, SleepScheduleEnum
+    HousingIntentEnum,
+    WakeTimeEnum,
+    CleanlinessEnum,
+    NoiseToleranceEnum,
+    CookingFrequencyEnum,
+    PetPreferenceEnum,
+    GuestsFrequencyEnum,
+    RoommateClosenessEnum,
+    OnCampusLocationEnum,
+    NumRoommatesEnum,
+    HaveLeaseLengthEnum,
+    DealbreakerEnum,
 )
 
 
 class SurveyCreate(BaseModel):
-    housing_type: List[HousingTypeEnum]
-    lease_length: List[LeaseLengthEnum]
-    guests_frequency: List[GuestsFrequencyEnum]
-    study_habits: List[StudyHabitsEnum]
+    housing_intent: Optional[HousingIntentEnum] = None
 
-    sleep_schedule: SleepScheduleEnum
+    # sliders / dates
+    budget_min: Optional[int] = None
+    budget_max: Optional[int] = None
+    move_in_date: Optional[date] = None
 
-    budget_min: int
-    budget_max: int
-    move_in_date: datetime
-    cleanliness_level: int
-    noise_level: int
-    interests: List[str]
-    personality_traits: dict
-    deal_breakers: List[str]
+    # wake/clean/noise
+    wake_time: Optional[WakeTimeEnum] = None
+    cleanliness: Optional[CleanlinessEnum] = None
+    noise_tolerance: Optional[NoiseToleranceEnum] = None
+
+    # interests + dealbreakers
+    interests: List[str] = []
+    dealbreakers: List[DealbreakerEnum] = []
+
+    # lifestyle personality
+    cooking_frequency: Optional[CookingFrequencyEnum] = None
+    pet_preference: Optional[PetPreferenceEnum] = None
+    guests_frequency: Optional[GuestsFrequencyEnum] = None
+    roommate_closeness: Optional[RoommateClosenessEnum] = None
+
+    # on-campus
+    on_campus_locations: List[OnCampusLocationEnum] = []
+    honors: Optional[bool] = None
+    llc_interest: Optional[bool] = None
+    num_roommates: Optional[NumRoommatesEnum] = None
+
+    # off-campus lease branch
+    have_lease: Optional[bool] = None
+    have_lease_length: HaveLeaseLengthEnum
+
+    # catch all
+    answers: Dict[str, Any] = {}
 
 
 class SurveyUpdate(BaseModel):
-    housing_type: Optional[List[HousingTypeEnum]] = None
-    lease_length: Optional[List[LeaseLengthEnum]] = None
-    guests_frequency: Optional[List[GuestsFrequencyEnum]] = None
-    study_habits: Optional[List[StudyHabitsEnum]] = None
-    sleep_schedule: Optional[SleepScheduleEnum] = None
+    housing_intent: Optional[HousingIntentEnum] = None
 
+    # sliders / dates
     budget_min: Optional[int] = None
     budget_max: Optional[int] = None
-    move_in_date: Optional[datetime] = None
-    cleanliness_level: Optional[int] = None
-    noise_level: Optional[int] = None
+    move_in_date: Optional[date] = None
+
+    # wake/clean/noise
+    wake_time: Optional[WakeTimeEnum] = None
+    cleanliness: Optional[CleanlinessEnum] = None
+    noise_tolerance: Optional[NoiseToleranceEnum] = None
+
+    # interests + dealbreakers
     interests: Optional[List[str]] = None
-    personality_traits: Optional[dict] = None
-    deal_breakers: Optional[List[str]] = None
+    dealbreakers: Optional[List[DealbreakerEnum]] = None
+
+    # lifestyle personality
+    cooking_frequency: Optional[CookingFrequencyEnum] = None
+    pet_preference: Optional[PetPreferenceEnum] = None
+    guests_frequency: Optional[GuestsFrequencyEnum] = None
+    roommate_closeness: Optional[RoommateClosenessEnum] = None
+
+    # on-campus
+    on_campus_locations: Optional[List[OnCampusLocationEnum]] = None
+    honors: Optional[bool] = None
+    llc_interest: Optional[bool] = None
+    num_roommates: Optional[NumRoommatesEnum] = None
+
+    # off-campus lease branch
+    have_lease: Optional[bool] = None
+    have_lease_length: Optional[HaveLeaseLengthEnum] = None
+
+    # catch all
+    answers: Optional[Dict[str, Any]] = None
 
 
 class SurveyResponse(BaseModel):
-    id: int
     user_id: str
-    housing_type: List[HousingTypeEnum]
-    lease_length: List[LeaseLengthEnum]
-    guests_frequency: List[GuestsFrequencyEnum]
-    study_habits: List[StudyHabitsEnum]
-    sleep_schedule: SleepScheduleEnum
 
-    budget_min: int
-    budget_max: int
-    move_in_date: datetime
-    cleanliness_level: int
-    noise_level: int
-    interests: List[str]
-    personality_traits: dict
-    deal_breakers: List[str]
-    ai_summary: Optional[str]
+    # core branching fields
+    housing_intent: Optional[HousingIntentEnum] = None
+
+    # sliders / dates
+    budget_min: Optional[int] = None
+    budget_max: Optional[int] = None
+    move_in_date: Optional[date] = None
+
+    # wake/clean/noise
+    wake_time: Optional[WakeTimeEnum] = None
+    cleanliness: Optional[CleanlinessEnum] = None
+    noise_tolerance: Optional[NoiseToleranceEnum] = None
+
+    # interests + dealbreakers
+    interests: List[str] = []
+    dealbreakers: List[DealbreakerEnum] = []
+
+    # lifestyle personality
+    cooking_frequency: Optional[CookingFrequencyEnum] = None
+    pet_preference: Optional[PetPreferenceEnum] = None
+    guests_frequency: Optional[GuestsFrequencyEnum] = None
+    roommate_closeness: Optional[RoommateClosenessEnum] = None
+
+    # on-campus
+    on_campus_locations: List[OnCampusLocationEnum] = []
+    honors: Optional[bool] = None
+    llc_interest: Optional[bool] = None
+    num_roommates: Optional[NumRoommatesEnum] = None
+
+    # off-campus
+    have_lease: Optional[bool] = None
+    have_lease_length: HaveLeaseLengthEnum
+
+    # catch all
+    answers: Dict[str, Any] = {}
+
     created_at: datetime
+    updated_at: datetime
 
     class Config:
         from_attributes = True

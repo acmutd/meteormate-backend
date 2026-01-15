@@ -140,9 +140,6 @@ celerybeat.pid
 .venv
 env/
 venv/
-ENV/
-env.bak/
-venv.bak/
 
 # Spyder project settings
 .spyderproject
@@ -214,3 +211,11 @@ alembic/versions/*.py
 !alembic/versions/
 *.html
 node_modules/
+
+# Misc
+.aider.chat.history.md
+.aider.input.history
+.aider.tags.cache.v4/
+.idea/
+package-lock.json
+package.json

@@ -1,11 +1,24 @@
 # Created by Ryan Polasky | 7/12/25
 # ACM MeteorMate | All Rights Reserved
 
+import enum
 from datetime import date
-from sqlalchemy import Column, Boolean, DateTime, Text, Date, func
+from typing import Optional
+
+from pydantic import BaseModel, EmailStr
+from sqlalchemy import Column, Boolean, DateTime, Text, Date, func, Enum
 from sqlalchemy.dialects import postgresql
 from sqlalchemy.ext.hybrid import hybrid_property
+from sqlalchemy.orm import relationship
+
 from app.database import Base
+from typing import Optional, Literal
+
+
+class InactivityStage(str, enum.Enum):
+    ONE_MONTH = "one_month"
+    ONE_WEEK = "one_week"
+    INACTIVE = "inactive"
 
 
 class User(Base):
@@ -14,9 +27,6 @@ class User(Base):
     id = Column(Text, primary_key=True, index=True)
     utd_id = Column(Text, unique=True, index=True)
     email = Column(Text, unique=True, index=True)
-    first_name = Column(Text)
-    last_name = Column(Text)
-    birthdate = Column(Date)
 
     # behind-the-scenes stuff
     is_active = Column(Boolean, nullable=False, server_default='true', default=True)
@@ -24,17 +34,29 @@ class User(Base):
     updated_at = Column(
         DateTime(timezone=True), nullable=False, server_default=func.now(), onupdate=func.now()
     )
+    inactivity_notification_stage = Column(Enum(InactivityStage), nullable=True)
+    last_inactivity_notification_sent_at = Column(DateTime, nullable=True)
 
-    # compute age
-    @hybrid_property
-    def age(self):
-        if not self.birthdate:
-            return None
-        today = date.today()
-        return today.year - self.birthdate.year - ((today.month, today.day)
-                                                   < (self.birthdate.month, self.birthdate.day))
+    survey = relationship(
+        "Survey", back_populates="user", uselist=False, cascade="all, delete-orphan"
+    )
+    profile = relationship(
+        "UserProfile", back_populates="user", uselist=False, cascade="all, delete-orphan"
+    )
 
-    @age.expression
-    def age(cls):
-        return func.extract('year', func.age(func.current_date(),
-                                             cls.birthdate)).cast(postgresql.INTEGER)
+
+class UserRequestVerify(BaseModel):
+    email: EmailStr
+    uid: Optional[str] = None
+    purpose: Literal["verify", "reset"] = "verify"
+
+
+class UserCompleteVerify(BaseModel):
+    email: EmailStr
+    code: str
+
+
+class UserResetPassword(BaseModel):
+    email: EmailStr
+    code: str
+    new_password: str

@@ -6,19 +6,18 @@ from datetime import datetime, date
 from pydantic import BaseModel
 
 Gender = Literal["female", "male", "non_binary", "prefer_not_to_say", "other"]
-ClassYear = Literal["freshman", "sophomore", "junior", "senior", "graduate", "other"]
-HousingIntent = Literal["on", "off", "both"]
+Classification = Literal["freshman", "sophomore", "junior", "senior", "graduate"]
 
 
 class UserProfileCreate(BaseModel):
-    user_id: str
-    gender: Optional[Gender] = None
-    major: Optional[str] = None
-    class_year: Optional[ClassYear] = None
-    llc: Optional[bool] = None
-    housing_intent: HousingIntent = "both"
-    bio: Optional[str] = None
+    gender: Gender
+    major: str
+    classification: Classification
+    bio: str
     profile_picture_url: Optional[str] = None
+    first_name: str
+    last_name: str
+    age: int
 
     class Config:
         from_attributes = True
@@ -27,11 +26,12 @@ class UserProfileCreate(BaseModel):
 class UserProfileUpdate(BaseModel):
     gender: Optional[Gender] = None
     major: Optional[str] = None
-    class_year: Optional[ClassYear] = None
-    llc: Optional[bool] = None
-    housing_intent: HousingIntent = "both"
+    classification: Optional[Classification] = None
     bio: Optional[str] = None
     profile_picture_url: Optional[str] = None
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
+    age: Optional[int] = None
 
     class Config:
         from_attributes = True
@@ -39,13 +39,16 @@ class UserProfileUpdate(BaseModel):
 
 class UserProfileResponse(BaseModel):
     user_id: str
-    gender: Optional[Gender] = None
-    major: Optional[str] = None
-    class_year: Optional[ClassYear] = None
-    llc: Optional[bool] = None
-    is_freshman: Optional[bool] = None  # computed in model
+    gender: Gender
+    major: str
+    classification: Classification
     created_at: datetime
     updated_at: datetime
+    first_name: str
+    last_name: str
+    age: int
+    profile_picture_url: Optional[str] = None
+    bio: str
 
     class Config:
         from_attributes = True

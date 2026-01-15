@@ -1,13 +1,27 @@
 # Created by Ryan Polasky | 7/12/25
 # ACM MeteorMate | All Rights Reserved
+
+import logging
+import sys
+
 import uvicorn
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
+
 from app.config import settings
 from app.database import engine, Base
-from app.api import auth, survey, matches, user
+from app.api import auth, survey, matches, cron, profiles
+
+logger = logging.getLogger("meteormate")
+logger.setLevel(logging.DEBUG)
+
+handler = logging.StreamHandler(sys.stdout)
+handler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
+logger.addHandler(handler)
+
+logger.propagate = False
 
 # create tables
 Base.metadata.create_all(bind=engine)
@@ -48,7 +62,8 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
 app.include_router(auth.router, prefix="/api/auth", tags=["auth"])
 app.include_router(survey.router, prefix="/api/survey", tags=["survey"])
 app.include_router(matches.router, prefix="/api/matches", tags=["matches"])
-app.include_router(user.router, prefix="/api/user", tags=["user"])
+app.include_router(cron.router, prefix="/api/cron", tags=["cron"])
+app.include_router(profiles.router, prefix="/api/profiles", tags=["user_profiles"])
 
 
 @app.get("/")
@@ -62,4 +77,5 @@ async def health_check():
 
 
 if __name__ == "__main__":
+    logging.info("Successfully started backup!")
     uvicorn.run(app, host="0.0.0.0", port=8000)
