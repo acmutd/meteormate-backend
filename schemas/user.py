@@ -5,9 +5,9 @@ from typing import Optional, Literal
 from datetime import date, datetime
 from pydantic import BaseModel, Field, computed_field, field_validator
 
-from app.models.user import InactivityStage
-from app.schemas.survey import SurveyResponse
-from app.schemas.user_profile import UserProfileResponse
+from backend.models.user import InactivityStage
+from backend.schemas.survey import SurveyResponse
+from backend.schemas.user_profile import UserProfileResponse
 
 
 class UserCreate(BaseModel):

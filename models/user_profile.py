@@ -6,7 +6,7 @@ from sqlalchemy.dialects import postgresql
 from sqlalchemy.dialects.postgresql import ENUM as PGEnum
 from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy.orm import relationship
-from app.database import Base
+from backend.database import Base
 
 GENDER_ENUM = PGEnum(
     'female',

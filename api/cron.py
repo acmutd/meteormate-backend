@@ -9,10 +9,10 @@ from sqlalchemy import text, and_
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
-from app.database import get_db
-from app.config import Settings
-from app.models.user import User, InactivityStage
-from app.utils.email import send_inactive_notices
+from backend.database import get_db
+from backend.config import Settings
+from backend.models.user import User, InactivityStage
+from backend.utils.email import send_inactive_notices
 
 logger = logging.getLogger("meteormate." + __name__)
 

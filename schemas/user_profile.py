@@ -4,7 +4,7 @@
 from typing import Optional, Literal, Self
 from datetime import datetime, date
 from pydantic import BaseModel, field_validator
-from app.schemas.validation_config import (
+from backend.schemas.validation_config import (
     FIRST_NAME_MIN_LEN,
     FIRST_NAME_MAX_LEN,
     LAST_NAME_MIN_LEN,

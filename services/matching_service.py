@@ -5,9 +5,9 @@ import logging
 from typing import List, Dict
 
 from sqlalchemy.orm import Session
-from app.models.user import User
-from app.models.survey import Survey
-from app.models.matches import Match
+from backend.models.user import User
+from backend.models.survey import Survey
+from backend.models.matches import Match
 
 logger = logging.getLogger("meteormate." + __name__)
 

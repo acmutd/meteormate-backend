@@ -7,7 +7,7 @@ from sqlalchemy import Column, Boolean, DateTime, Text, ForeignKey, func, Intege
 from sqlalchemy.dialects import postgresql
 from sqlalchemy.dialects.postgresql import ENUM as PGEnum
 from sqlalchemy.ext.hybrid import hybrid_property
-from app.database import Base
+from backend.database import Base
 
 CODE_TYPE_ENUM = PGEnum(
     'pwd_reset_code', 'acc_verification_code', name='code_type_enum', create_type=True

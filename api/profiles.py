@@ -8,14 +8,14 @@ from requests import Session
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 
-from app.database import get_db
-from app.models.user_profile import UserProfile
-from app.schemas.user_profile import (
+from backend.database import get_db
+from backend.models.user_profile import UserProfile
+from backend.schemas.user_profile import (
     UserProfileCreate,
     UserProfileResponse,
     UserProfileUpdate,
 )
-from app.utils.firebase_auth import get_current_user
+from backend.utils.firebase_auth import get_current_user
 
 logger = logging.getLogger("meteormate." + __name__)
 

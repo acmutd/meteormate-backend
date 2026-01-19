@@ -10,12 +10,12 @@ from sqlalchemy.orm import Session
 from sqlalchemy.exc import SQLAlchemyError
 from firebase_admin import auth
 
-from app.database import get_db
-from app.models.user import User, UserRequestVerify, UserCompleteVerify, UserResetPassword
-from app.models.verification_codes import VerificationCodes, CodeType
-from app.utils.firebase_auth import get_current_user, get_firebase_user
-from app.utils.email import send_verification_email
-from app.schemas.user import UserCreate, UserResponse
+from backend.database import get_db
+from backend.models.user import User, UserRequestVerify, UserCompleteVerify, UserResetPassword
+from backend.models.verification_codes import VerificationCodes, CodeType
+from backend.utils.firebase_auth import get_current_user, get_firebase_user
+from backend.utils.email import send_verification_email
+from backend.schemas.user import UserCreate, UserResponse
 
 logger = logging.getLogger("meteormate." + __name__)
 
