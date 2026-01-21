@@ -1,9 +1,9 @@
 # Created by Ryan Polasky | 7/12/25
 # ACM MeteorMate | All Rights Reserved
 
+import json
 from decouple import config
 from typing import List
-import json
 
 
 class Settings:
