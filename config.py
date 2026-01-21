@@ -3,6 +3,7 @@
 
 from decouple import config
 from typing import List
+import json
 
 
 class Settings:
@@ -33,6 +34,14 @@ class Settings:
 
     # admin user uid for testing
     ADMIN_UID: str = config("ADMIN_UID", default="")
+
+    # validation config
+    FIRST_NAME_MIN_LEN: int = 2
+    FIRST_NAME_MAX_LEN: int = 50
+    LAST_NAME_MIN_LEN: int = 2
+    LAST_NAME_MAX_LEN: int = 50
+    MIN_AGE: int = 16
+    MAX_AGE: int = 80
 
 
 settings = Settings()

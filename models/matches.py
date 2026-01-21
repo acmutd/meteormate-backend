@@ -3,7 +3,7 @@
 
 from sqlalchemy import Column, Text, Boolean, DateTime, ForeignKey, Integer
 from sqlalchemy.sql import func
-from backend.database import Base
+from ..database import Base
 
 
 class Match(Base):

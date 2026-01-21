@@ -4,18 +4,17 @@
 import logging
 
 from fastapi import APIRouter, Depends, HTTPException
-from requests import Session
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 
-from backend.database import get_db
-from backend.models.user_profile import UserProfile
-from backend.schemas.user_profile import (
+from ..database import get_db
+from ..models.user_profile import UserProfile
+from ..schemas.user_profile import (
     UserProfileCreate,
     UserProfileResponse,
     UserProfileUpdate,
 )
-from backend.utils.firebase_auth import get_current_user
+from ..utils.firebase_auth import get_current_user
 
 logger = logging.getLogger("meteormate." + __name__)
 

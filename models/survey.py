@@ -18,7 +18,7 @@ from sqlalchemy.dialects.postgresql import ARRAY, JSONB
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 
-from backend.database import Base
+from ..database import Base
 
 
 def mm_enum(enum_cls: type[enum.Enum], name: str) -> SAEnum:

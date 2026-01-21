@@ -1,13 +1,12 @@
 # Created by Ryan Polasky | 7/12/25
 # ACM MeteorMate | All Rights Reserved
 
-from typing import Optional, Literal
-from datetime import date, datetime
-from pydantic import BaseModel, Field, computed_field, field_validator
+from typing import Optional
+from datetime import datetime
+from pydantic import BaseModel, computed_field, field_validator
 
-from backend.models.user import InactivityStage
-from backend.schemas.survey import SurveyResponse
-from backend.schemas.user_profile import UserProfileResponse
+from ..schemas.survey import SurveyResponse
+from ..schemas.user_profile import UserProfileResponse
 
 
 class UserCreate(BaseModel):

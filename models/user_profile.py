@@ -1,12 +1,10 @@
 # Created by Ryan Polasky | 9/20/25
 # ACM MeteorMate | All Rights Reserved
 
-from sqlalchemy import Column, Boolean, DateTime, Text, ForeignKey, func, Numeric
-from sqlalchemy.dialects import postgresql
+from sqlalchemy import Column, DateTime, Text, ForeignKey, func, Numeric
 from sqlalchemy.dialects.postgresql import ENUM as PGEnum
-from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy.orm import relationship
-from backend.database import Base
+from ..database import Base
 
 GENDER_ENUM = PGEnum(
     'female',
