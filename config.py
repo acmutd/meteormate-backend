@@ -7,9 +7,11 @@ from typing import List
 
 class Settings:
     DATABASE_URL: str = config("DATABASE_URL")
-    FIREBASE_CREDENTIALS_PATH: str = config(
-        "FIREBASE_CREDENTIALS_PATH", default="firebase-key.json"
+
+    FIREBASE_CREDENTIALS = json.loads(
+        config("FIREBASE_CREDENTIALS", default="{}")
     )
+
     ALLOWED_ORIGINS: List[str] = ["*"]  # todo - change this to meteormate.com when site is live
     DEBUG: bool = config("DEBUG", default=False, cast=bool)
 
