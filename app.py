@@ -58,12 +58,12 @@ def create_app() -> FastAPI:
         )
 
     # Routes
-    app.include_router(auth.router, prefix="/routes/auth", tags=["auth"])
-    app.include_router(survey.router, prefix="/routes/survey", tags=["survey"])
-    app.include_router(matches.router, prefix="/routes/matches", tags=["matches"])
-    app.include_router(cron.router, prefix="/routes/cron", tags=["cron"])
+    app.include_router(auth.router, prefix="/auth", tags=["auth"])
+    app.include_router(survey.router, prefix="/survey", tags=["survey"])
+    app.include_router(matches.router, prefix="/matches", tags=["matches"])
+    app.include_router(cron.router, prefix="/cron", tags=["cron"])
     app.include_router(
-        profiles.router, prefix="/routes/profiles", tags=["user_profiles"]
+        profiles.router, prefix="/profiles", tags=["user_profiles"]
     )
 
     @app.get("")
