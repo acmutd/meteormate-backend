@@ -3,7 +3,7 @@
 
 from enum import Enum
 
-from sqlalchemy import Column, Boolean, DateTime, Text, ForeignKey, func, Integer, Enum as SqlEnum
+from sqlalchemy import Column, Boolean, DateTime, Text, ForeignKey, func, Integer
 from sqlalchemy.dialects import postgresql
 from sqlalchemy.dialects.postgresql import ENUM as PGEnum
 from sqlalchemy.ext.hybrid import hybrid_property
@@ -26,7 +26,7 @@ class VerificationCodes(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     code = Column(Text)
-    type = Column(SqlEnum(CodeType))
+    type = Column(CODE_TYPE_ENUM)
 
     # behind-the-scenes stuff
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
