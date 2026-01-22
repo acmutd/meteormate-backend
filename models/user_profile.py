@@ -4,7 +4,7 @@
 from sqlalchemy import Column, DateTime, Text, ForeignKey, func, Numeric
 from sqlalchemy.dialects.postgresql import ENUM as PGEnum
 from sqlalchemy.orm import relationship
-from ..database import Base
+from ..database import ORMBase
 
 GENDER_ENUM = PGEnum(
     'female',
@@ -27,7 +27,7 @@ CLASSIFICATION_ENUM = PGEnum(
 )
 
 
-class UserProfile(Base):
+class UserProfile(ORMBase):
     __tablename__ = "user_profiles"
 
     user_id = Column(Text, ForeignKey("users.id", ondelete="CASCADE"), primary_key=True, index=True)

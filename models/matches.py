@@ -3,10 +3,10 @@
 
 from sqlalchemy import Column, Text, Boolean, DateTime, ForeignKey, Integer
 from sqlalchemy.sql import func
-from ..database import Base
+from ..database import ORMBase
 
 
-class Match(Base):
+class Match(ORMBase):
     __tablename__ = "matches"
 
     id = Column(Integer, primary_key=True, index=True)
