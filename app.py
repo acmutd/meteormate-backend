@@ -6,7 +6,7 @@ import logging
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.exceptions import RequestValidationError
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, RedirectResponse
 
 from backend.config import settings
 from backend.routes import auth, survey, matches, cron, profiles
@@ -16,6 +16,7 @@ def create_app() -> FastAPI:
     app = FastAPI(
         title="MeteorMate API",
         version="1.0.0",
+        root_path="/api",
     )
 
     # Logging
@@ -64,6 +65,10 @@ def create_app() -> FastAPI:
     app.include_router(
         profiles.router, prefix="/routes/profiles", tags=["user_profiles"]
     )
+
+    @app.get("")
+    async def root_no_slash():
+        return RedirectResponse(url="/")
 
     # Health / root
     @app.get("/")
