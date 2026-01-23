@@ -4,7 +4,9 @@
 import logging
 import sys
 
+import firebase_admin
 import uvicorn
+from firebase_admin import credentials
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.exceptions import RequestValidationError
@@ -22,6 +24,16 @@ handler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s -
 logger.addHandler(handler)
 
 logger.propagate = False
+
+# noinspection PyProtectedMember
+if not firebase_admin._apps:
+    try:
+        cred = credentials.Certificate(settings.FIREBASE_CREDENTIALS_PATH)
+        firebase_admin.initialize_app(cred, {"storageBucket": "meteormate.firebasestorage.app"})
+        logger.info("Firebase Admin SDK initialized successfully")
+    except Exception as e:
+        logger.critical(f"Failed to initialize Firebase Admin SDK: {str(e)}")
+        raise
 
 # create tables
 Base.metadata.create_all(bind=engine)
