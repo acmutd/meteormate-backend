@@ -3,23 +3,12 @@
 
 import logging
 
-import firebase_admin
-from firebase_admin import credentials, auth
+from firebase_admin import auth
 from fastapi import HTTPException, Depends
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from app.config import settings
 
 logger = logging.getLogger("meteormate." + __name__)
-
-# noinspection PyProtectedMember
-if not firebase_admin._apps:
-    try:
-        cred = credentials.Certificate(settings.FIREBASE_CREDENTIALS_PATH)
-        firebase_admin.initialize_app(cred)
-        logger.info("Firebase Admin SDK initialized successfully")
-    except Exception as e:
-        logger.critical(f"Failed to initialize Firebase Admin SDK: {str(e)}")
-        raise
 
 security = HTTPBearer()
 
