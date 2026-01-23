@@ -193,15 +193,13 @@ async def upload_profile_pic(
             detail="image data not in base64 format",
         )
 
-    file_ext = header["data:image/".length:header.indexOf(";base64")
+    file_ext = header[len("data:image/"):header.index(";base64")
                       ]  # holy syntax, python should js add substring method
     if file_ext not in ["jpeg", "jpg", "png", "webp"]:
         raise HTTPException(
             status_code=422,  # unprocessable entity
-            detail="image data not in base64 format",
+            detail="not an acceptable image type",
         )
-
-    blob_path = f"/profile-pictures/{uid}.{file_ext}"
 
     try:
         profile = db.query(UserProfile).filter(UserProfile.user_id == uid).first()
@@ -213,8 +211,11 @@ async def upload_profile_pic(
                 status_code=404, detail="User profile not found"
             )  # not found without a twist
 
+        index = len(profile.profile_picture_url)
+        blob_path = f"profile-pictures/{uid}-{index}.webp"
+
         profile_pic_url = upload_profile_picture(
-            data, blob_path, file_ext
+            data, blob_path
         )  # raises http exceptions do not catch
 
         profile.profile_picture_url.append(profile_pic_url)
