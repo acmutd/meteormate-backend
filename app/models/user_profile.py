@@ -1,10 +1,11 @@
 # Created by Ryan Polasky | 9/20/25
 # ACM MeteorMate | All Rights Reserved
 
-from sqlalchemy import Column, Boolean, DateTime, Text, ForeignKey, func, Numeric
+from sqlalchemy import Column, Boolean, DateTime, Text, ForeignKey, func, Numeric, ARRAY
 from sqlalchemy.dialects import postgresql
 from sqlalchemy.dialects.postgresql import ENUM as PGEnum
 from sqlalchemy.ext.hybrid import hybrid_property
+from sqlalchemy.ext.mutable import MutableList
 from sqlalchemy.orm import relationship
 from app.database import Base
 
@@ -38,7 +39,7 @@ class UserProfile(Base):
     major = Column(Text)
     classification = Column(CLASSIFICATION_ENUM)
     bio = Column(Text)
-    profile_picture_url = Column(Text)
+    profile_picture_url = Column(MutableList.as_mutable(ARRAY(Text)))
 
     # moved from user table
     first_name = Column(Text)

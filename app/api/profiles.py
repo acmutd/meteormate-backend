@@ -217,9 +217,7 @@ async def upload_profile_pic(
             data, blob_path, file_ext
         )  # raises http exceptions do not catch
 
-        update_data = {"profile_picture_url": profile_pic_url}
-        for field, value in update_data.items():
-            setattr(profile, field, value)
+        profile.profile_picture_url.append(profile_pic_url)
 
         db.commit()
         db.refresh(profile)
