@@ -5,9 +5,10 @@ import logging
 import enum as py_enum
 
 from sqlalchemy import create_engine
-from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
-from app.config import settings
+from sqlalchemy.orm import declarative_base
+
+from .config import settings
 
 logger = logging.getLogger("meteormate." + __name__)
 
@@ -30,7 +31,7 @@ except Exception as e:
     logger.critical(f"Failed to initialize database engine: {str(e)}")
     raise
 
-Base = declarative_base()
+ORMBase = declarative_base()
 
 
 def get_db():

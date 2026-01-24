@@ -1,12 +1,10 @@
 # Created by Ryan Polasky | 9/20/25
 # ACM MeteorMate | All Rights Reserved
 
-from sqlalchemy import Column, Boolean, DateTime, Text, ForeignKey, func, Numeric
-from sqlalchemy.dialects import postgresql
+from sqlalchemy import Column, DateTime, Text, ForeignKey, func, Numeric
 from sqlalchemy.dialects.postgresql import ENUM as PGEnum
-from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy.orm import relationship
-from app.database import Base
+from ..database import ORMBase
 
 GENDER_ENUM = PGEnum(
     'female',
@@ -29,7 +27,7 @@ CLASSIFICATION_ENUM = PGEnum(
 )
 
 
-class UserProfile(Base):
+class UserProfile(ORMBase):
     __tablename__ = "user_profiles"
 
     user_id = Column(Text, ForeignKey("users.id", ondelete="CASCADE"), primary_key=True, index=True)

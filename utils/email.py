@@ -6,7 +6,7 @@ from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from fastapi import HTTPException
 
-from app.config import settings
+from ..config import settings
 
 
 # noinspection DuplicatedCode

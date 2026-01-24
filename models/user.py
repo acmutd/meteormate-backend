@@ -2,17 +2,13 @@
 # ACM MeteorMate | All Rights Reserved
 
 import enum
-from datetime import date
-from typing import Optional
+from typing import Optional, Literal
 
 from pydantic import BaseModel, EmailStr
-from sqlalchemy import Column, Boolean, DateTime, Text, Date, func, Enum
-from sqlalchemy.dialects import postgresql
-from sqlalchemy.ext.hybrid import hybrid_property
+from sqlalchemy import Column, Boolean, DateTime, Text, func, Enum
 from sqlalchemy.orm import relationship
 
-from app.database import Base
-from typing import Optional, Literal
+from ..database import ORMBase
 
 
 class InactivityStage(str, enum.Enum):
@@ -21,7 +17,7 @@ class InactivityStage(str, enum.Enum):
     INACTIVE = "inactive"
 
 
-class User(Base):
+class User(ORMBase):
     __tablename__ = "users"
 
     id = Column(Text, primary_key=True, index=True)
