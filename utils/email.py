@@ -61,7 +61,7 @@ def send_verification_email(email: str, code: str):
                                             <td style="text-align: center;">
                                                 <!-- Logo placeholder - replace with actual logo URL -->
                                                 <div style="background-color: #2B2B2B; width: 80px; height: 80px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; margin: 0 auto;">
-                                                    <span style="font-size: 40px; color: #FFFFFF;">🌠</span>
+                                                    <img src="https://www.meteormate.com/logo.svg" alt="MeteorMate" style="max-width: 100%; height: auto;">
                                                 </div>
                                             </td>
                                         </tr>
@@ -274,7 +274,7 @@ def send_inactive_notices(email: str, notice_num: int):
                                             <tr>
                                                 <td style="text-align: center;">
                                                     <div style="background-color: #2B2B2B; width: 80px; height: 80px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; margin: 0 auto;">
-                                                        <span style="font-size: 40px; color: #FFFFFF;">🌠</span>
+                                                        <img src="https://www.meteormate.com/logo.svg" alt="MeteorMate" style="max-width: 100%; height: auto;">
                                                     </div>
                                                 </td>
                                             </tr>
