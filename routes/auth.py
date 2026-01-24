@@ -78,7 +78,7 @@ def verify_code(db: Session, uid: str, code: str, purpose: str, consume: bool = 
             f"User {uid} attempted to {purpose}, but has no verification codes in the DB"
         )
         raise HTTPException(status_code=400, detail="No verification code found")
-    if code_obj.created_at < datetime.utcnow() - timedelta(minutes=10):
+    if code_obj.created_at < datetime.utcnow() - timedelta(minutes=30):
         logger.warning(f"User {uid} attempted to {purpose} with an expired verification code")
         raise HTTPException(status_code=400, detail="Verification code expired")
     if code_obj.code != code:
