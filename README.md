@@ -61,7 +61,7 @@ DEBUG=true
 
 **Run the server:**
 ```bash
-uvicorn app.main:app --reload
+python -m backend.main
 ```
 
 **Formatting:**
