@@ -1,7 +1,7 @@
 # Created by Ryan Polasky | 9/20/25
 # ACM MeteorMate | All Rights Reserved
 
-from typing import Optional, Literal, Self
+from typing import List, Optional, Literal, Self
 from datetime import datetime, date
 from pydantic import BaseModel, field_validator
 
@@ -24,7 +24,7 @@ class UserProfileCreate(BaseModel):
     major: str
     classification: Classification
     bio: str
-    profile_picture_url: Optional[str] = None
+    profile_picture_url: Optional[List[str]] = None
     first_name: str
     last_name: str
     age: int
@@ -51,7 +51,7 @@ class UserProfileUpdate(BaseModel):
     major: Optional[str] = None
     classification: Optional[Classification] = None
     bio: Optional[str] = None
-    profile_picture_url: Optional[str] = None
+    profile_picture_url: Optional[List[str]] = None
     first_name: Optional[str] = None
     last_name: Optional[str] = None
     age: Optional[int] = None
@@ -83,8 +83,11 @@ class UserProfileResponse(BaseModel):
     first_name: str
     last_name: str
     age: int
-    profile_picture_url: Optional[str] = None
+    profile_picture_url: Optional[List[str]] = None
     bio: str
 
     class Config:
         from_attributes = True
+
+class UserProfilePicture(BaseModel):
+    base64: str
