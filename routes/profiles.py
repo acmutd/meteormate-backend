@@ -7,10 +7,13 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 
+from ..utils.firebase_storage import upload_profile_picture
+
 from ..database import get_db
 from ..models.user_profile import UserProfile
 from ..schemas.user_profile import (
     UserProfileCreate,
+    UserProfilePicture,
     UserProfileResponse,
     UserProfileUpdate,
 )
@@ -170,4 +173,83 @@ async def get_user_profile(uid: str, db: Session = Depends(get_db)):
         raise HTTPException(
             status_code=500,  # internal server error
             detail="Database error updating user profile",
+        )
+        
+@router.post("/upload", response_model=UserProfileResponse)
+async def upload_profile_pic(
+    image_data: UserProfilePicture,
+    current_user_token=Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    uid = current_user_token.get("uid")
+
+    if "," in image_data.base64:
+        header = image_data.base64.split(",")[0]
+        data = image_data.base64.split(",")[1]
+    else:
+        raise HTTPException(
+            status_code=422,  # unprocessable entity
+            detail="image data not in base64 format",
+        )
+
+    file_ext = header[len("data:image/"):header.index(";base64")
+                      ]  # holy syntax, python should js add substring method
+    if file_ext not in ["jpeg", "jpg", "png", "webp"]:
+        raise HTTPException(
+            status_code=422,  # unprocessable entity
+            detail="not an acceptable image type",
+        )
+
+    try:
+        profile = db.query(UserProfile).filter(UserProfile.user_id == uid).first()
+        if not profile:
+            logger.warning(
+                f"/api/profiles/upload: tried getting profile that doesn't exist for User {uid}"
+            )
+            raise HTTPException(
+                status_code=404, detail="User profile not found"
+            )  # not found without a twist
+
+        index = len(profile.profile_picture_url)
+        blob_path = f"profile-pictures/{uid}-{index}.webp"
+
+        profile_pic_url = upload_profile_picture(
+            data, blob_path
+        )  # raises http exceptions do not catch
+
+        profile.profile_picture_url.append(profile_pic_url)
+
+        db.commit()
+        db.refresh(profile)
+
+        logger.info(f"/api/profiles/upload: updated user profile for User {uid}")
+
+        return profile
+
+    except IntegrityError as e:
+        db.rollback()
+
+        if "foreign key" in str(e.orig).lower():
+            logger.exception(
+                f"/api/profiles/upload: encountered a foreign key for a user that doesn't exists, recheck firebase and db table for User {uid}"
+            )
+            raise HTTPException(
+                status_code=404,  # not found but with a twist where the db is messed up
+                detail="User does not exist.",
+            )
+
+        logger.exception(f"/api/profiles/upload: profile conflicts exist for User {uid}")
+        raise HTTPException(
+            status_code=409,  # conflict error different from duplicate
+            detail="User profile conflicts on db",
+        )
+
+    except SQLAlchemyError:
+        db.rollback()
+        logger.exception(
+            f"/api/profiles/upload: Unexpected DB error while updating profile for User {uid}"
+        )
+        raise HTTPException(
+            status_code=500,  # internal server error
+            detail="Database error uploading user profile picture",
         )

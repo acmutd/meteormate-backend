@@ -12,6 +12,7 @@ class Settings:
     FIREBASE_CREDENTIALS = json.loads(
         config("FIREBASE_CREDENTIALS", default="{}")
     )
+    FIREBASE_STORAGE_BUCKET: str = config("FIREBASE_STORAGE_BUCKET", default="")
 
     ALLOWED_ORIGINS: List[str] = ["*"]  # todo - change this to meteormate.com when site is live
     DEBUG: bool = config("DEBUG", default=False, cast=bool)
