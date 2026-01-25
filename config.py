@@ -1,15 +1,18 @@
 # Created by Ryan Polasky | 7/12/25
 # ACM MeteorMate | All Rights Reserved
 
+import json
 from decouple import config
 from typing import List
 
 
 class Settings:
     DATABASE_URL: str = config("DATABASE_URL")
-    FIREBASE_CREDENTIALS_PATH: str = config(
-        "FIREBASE_CREDENTIALS_PATH", default="firebase-key.json"
+
+    FIREBASE_CREDENTIALS = json.loads(
+        config("FIREBASE_CREDENTIALS", default="{}")
     )
+
     ALLOWED_ORIGINS: List[str] = ["*"]  # todo - change this to meteormate.com when site is live
     DEBUG: bool = config("DEBUG", default=False, cast=bool)
 
@@ -31,6 +34,14 @@ class Settings:
 
     # admin user uid for testing
     ADMIN_UID: str = config("ADMIN_UID", default="")
+
+    # validation config
+    FIRST_NAME_MIN_LEN: int = 2
+    FIRST_NAME_MAX_LEN: int = 50
+    LAST_NAME_MIN_LEN: int = 2
+    LAST_NAME_MAX_LEN: int = 50
+    MIN_AGE: int = 16
+    MAX_AGE: int = 80
 
 
 settings = Settings()

@@ -4,17 +4,14 @@
 import logging
 import sys
 
-import firebase_admin
 import uvicorn
-from firebase_admin import credentials
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 
-from app.config import settings
-from app.database import engine, Base
-from app.api import auth, survey, matches, cron, profiles
+from backend.config import settings
+from backend.routes import auth, survey, matches, cron, profiles
 
 logger = logging.getLogger("meteormate")
 logger.setLevel(logging.DEBUG)
@@ -25,20 +22,7 @@ logger.addHandler(handler)
 
 logger.propagate = False
 
-# noinspection PyProtectedMember
-if not firebase_admin._apps:
-    try:
-        cred = credentials.Certificate(settings.FIREBASE_CREDENTIALS_PATH)
-        firebase_admin.initialize_app(cred, {"storageBucket": "meteormate.firebasestorage.app"})
-        logger.info("Firebase Admin SDK initialized successfully")
-    except Exception as e:
-        logger.critical(f"Failed to initialize Firebase Admin SDK: {str(e)}")
-        raise
-
-# create tables
-Base.metadata.create_all(bind=engine)
-
-app = FastAPI(title="MeteorMate API", version="1.0.0")
+app = FastAPI(title="MeteorMate API", version="1.0.0", root_path="/api")
 
 app.add_middleware(
     CORSMiddleware,
@@ -71,11 +55,11 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
 
 
 # routes
-app.include_router(auth.router, prefix="/api/auth", tags=["auth"])
-app.include_router(survey.router, prefix="/api/survey", tags=["survey"])
-app.include_router(matches.router, prefix="/api/matches", tags=["matches"])
-app.include_router(cron.router, prefix="/api/cron", tags=["cron"])
-app.include_router(profiles.router, prefix="/api/profiles", tags=["user_profiles"])
+app.include_router(auth.router, prefix="/auth", tags=["auth"])
+app.include_router(survey.router, prefix="/survey", tags=["survey"])
+app.include_router(matches.router, prefix="/matches", tags=["matches"])
+app.include_router(cron.router, prefix="/cron", tags=["cron"])
+app.include_router(profiles.router, prefix="/profiles", tags=["user_profiles"])
 
 
 @app.get("/")
@@ -90,4 +74,4 @@ async def health_check():
 
 if __name__ == "__main__":
     logging.info("Successfully started backup!")
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    uvicorn.run("backend.main:app", host="127.0.0.1", port=3000, reload=settings.DEBUG)

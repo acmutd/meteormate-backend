@@ -10,12 +10,12 @@ from sqlalchemy.orm import Session
 from sqlalchemy.exc import SQLAlchemyError
 from firebase_admin import auth
 
-from app.database import get_db
-from app.models.user import User, UserRequestVerify, UserCompleteVerify, UserResetPassword
-from app.models.verification_codes import VerificationCodes, CodeType
-from app.utils.firebase_auth import get_current_user, get_firebase_user
-from app.utils.email import send_verification_email
-from app.schemas.user import UserCreate, UserResponse
+from ..database import get_db
+from ..models.user import User, UserRequestVerify, UserCompleteVerify, UserResetPassword
+from ..models.verification_codes import VerificationCodes, CodeType
+from ..utils.firebase_auth import get_current_user, get_firebase_user
+from ..utils.email import send_verification_email
+from ..schemas.user import UserCreate, UserResponse
 
 logger = logging.getLogger("meteormate." + __name__)
 
@@ -78,7 +78,7 @@ def verify_code(db: Session, uid: str, code: str, purpose: str, consume: bool = 
             f"User {uid} attempted to {purpose}, but has no verification codes in the DB"
         )
         raise HTTPException(status_code=400, detail="No verification code found")
-    if code_obj.created_at < datetime.utcnow() - timedelta(minutes=10):
+    if code_obj.created_at < datetime.utcnow() - timedelta(minutes=30):
         logger.warning(f"User {uid} attempted to {purpose} with an expired verification code")
         raise HTTPException(status_code=400, detail="Verification code expired")
     if code_obj.code != code:

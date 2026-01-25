@@ -2,17 +2,15 @@
 # ACM MeteorMate | All Rights Reserved
 
 import logging
-from typing import List
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import SQLAlchemyError
 
-from app.database import get_db
-from app.models.user import User
-from app.models.survey import Survey
-from app.services.matching_service import MatchingService
-from app.utils.firebase_auth import get_current_user
+from ..database import get_db
+from ..models.survey import Survey
+from ..services.matching_service import MatchingService
+from ..utils.firebase_auth import get_current_user
 
 logger = logging.getLogger("meteormate." + __name__)
 
