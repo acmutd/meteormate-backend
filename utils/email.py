@@ -1,7 +1,6 @@
 # Created by Ryan Polasky | 10/22/25
 # ACM MeteorMate | All Rights Reserved
 
-import os
 import smtplib
 from importlib import resources
 from email.mime.text import MIMEText
@@ -21,8 +20,7 @@ def send_verification_email(email: str, code: str):
         msg['From'] = settings.EMAIL_USER
         msg['To'] = email
 
-        # load the template with use dir magic
-
+        # load the template using python modules with importlib
         html = resources.files("backend.static").joinpath("email_template.html").read_text(
             encoding="utf-8"
         ).replace("{code}", code)
@@ -71,7 +69,7 @@ def send_inactive_notices(email: str, notice_num: int):
         msg['From'] = settings.EMAIL_USER
         msg['To'] = email
 
-        # HTML email body with MeteorMate styling
+        # load the template using python modules with importlib
         html = resources.files("backend.static").joinpath("reset_password.html").read_text(
             encoding="utf-8"
         ).replace("{inactivity_warning}", inactivity_warning)
