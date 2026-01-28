@@ -7,10 +7,10 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import SQLAlchemyError
 
-from ..database import get_db
-from ..models.survey import Survey
-from ..services.matching_service import MatchingService
-from ..utils.firebase_auth import get_current_user
+from database import get_db
+from models.survey import Survey
+from services.matching_service import MatchingService
+from utils.firebase_auth import get_current_user
 
 logger = logging.getLogger("meteormate." + __name__)
 

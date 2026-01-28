@@ -5,7 +5,7 @@ from sqlalchemy import ARRAY, Column, DateTime, Text, ForeignKey, func, Numeric
 from sqlalchemy.dialects.postgresql import ENUM as PGEnum
 from sqlalchemy.orm import relationship
 from sqlalchemy.ext.mutable import MutableList
-from ..database import ORMBase
+from database import ORMBase
 
 GENDER_ENUM = PGEnum(
     'female',
