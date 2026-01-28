@@ -2,8 +2,8 @@
 # ACM MeteorMate | All Rights Reserved
 
 import random
-from datetime import datetime, timedelta
 import logging
+from datetime import datetime, timedelta, timezone
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
@@ -72,13 +72,15 @@ def verify_code(db: Session, uid: str, code: str, purpose: str, consume: bool = 
         .filter(VerificationCodes.user_id == uid, VerificationCodes.type == code_type) \
         .order_by(VerificationCodes.created_at.desc()) \
         .first()
+        
+    expires_at = code_obj.created_at + timedelta(minutes=10)
 
     if not code_obj:
         logger.warning(
             f"User {uid} attempted to {purpose}, but has no verification codes in the DB"
         )
         raise HTTPException(status_code=400, detail="No verification code found")
-    if code_obj.created_at < datetime.utcnow() - timedelta(minutes=30):
+    if datetime.now(timezone.utc) > expires_at:
         logger.warning(f"User {uid} attempted to {purpose} with an expired verification code")
         raise HTTPException(status_code=400, detail="Verification code expired")
     if code_obj.code != code:
@@ -172,10 +174,11 @@ async def send_verification_code(request: UserRequestVerify, db: Session = Depen
     code = create_verification_code(db, uid, request.purpose)
 
     try:
-        await send_verification_email(str(request.email), code)
+        send_verification_email(str(request.email), code)
         logger.info(f"Successfully sent User {uid} an email for purpose {purpose}")
         return {"message": "Verification code sent to email"}
     except Exception as e:
+        db.rollback()
         logger.error(f"There was an error sending an email to User {uid}: {str(e)}")
         raise HTTPException(status_code=500, detail="Failed to send verification code")
 
