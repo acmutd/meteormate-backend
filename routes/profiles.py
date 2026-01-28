@@ -7,17 +7,17 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 
-from ..utils.firebase_storage import upload_profile_picture
+from utils.firebase_storage import upload_profile_picture
 
-from ..database import get_db
-from ..models.user_profile import UserProfile
-from ..schemas.user_profile import (
+from database import get_db
+from models.user_profile import UserProfile
+from schemas.user_profile import (
     UserProfileCreate,
     UserProfilePicture,
     UserProfileResponse,
     UserProfileUpdate,
 )
-from ..utils.firebase_auth import get_current_user
+from utils.firebase_auth import get_current_user
 
 logger = logging.getLogger("meteormate." + __name__)
 

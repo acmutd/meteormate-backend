@@ -5,8 +5,8 @@ from typing import Optional
 from datetime import datetime
 from pydantic import BaseModel, computed_field, field_validator
 
-from ..schemas.survey import SurveyResponse
-from ..schemas.user_profile import UserProfileResponse
+from schemas.survey import SurveyResponse
+from schemas.user_profile import UserProfileResponse
 
 
 class UserCreate(BaseModel):

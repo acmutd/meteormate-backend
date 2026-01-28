@@ -10,8 +10,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 
-from .config import settings
-from .routes import auth, survey, matches, cron, profiles
+from config import settings
+from routes import auth, survey, matches, cron, profiles
 
 logger = logging.getLogger("meteormate")
 logger.setLevel(logging.DEBUG)
@@ -74,4 +74,4 @@ async def health_check():
 
 if __name__ == "__main__":
     logging.info("Successfully started backup!")
-    uvicorn.run("backend.main:app", host="127.0.0.1", port=3000, reload=settings.DEBUG)
+    uvicorn.run("main:app", host="127.0.0.1", port=8000, reload=settings.DEBUG)

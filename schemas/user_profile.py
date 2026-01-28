@@ -5,7 +5,7 @@ from typing import List, Optional, Literal, Self
 from datetime import datetime, date
 from pydantic import BaseModel, field_validator
 
-from ..config import settings
+from config import settings
 
 Gender = Literal["female", "male", "non_binary", "prefer_not_to_say", "other"]
 Classification = Literal["freshman", "sophomore", "junior", "senior", "graduate"]
@@ -44,6 +44,8 @@ class UserProfileCreate(BaseModel):
     def validate_age(cls, v):
         if v < settings.MIN_AGE or v > settings.MAX_AGE:
             raise ValueError(f"User's age must be between {settings.MIN_AGE} and {settings.MAX_AGE} years")
+        
+        return v
 
 
 class UserProfileUpdate(BaseModel):
@@ -71,6 +73,8 @@ class UserProfileUpdate(BaseModel):
     def validate_age(cls, v):
         if v < settings.MIN_AGE or v > settings.MAX_AGE:
             raise ValueError(f"User's age must be between {settings.MIN_AGE} and {settings.MAX_AGE} years (inclusive)")
+
+        return v
 
 
 class UserProfileResponse(BaseModel):

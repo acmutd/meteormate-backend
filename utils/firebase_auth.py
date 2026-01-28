@@ -8,7 +8,7 @@ from firebase_admin import credentials, auth
 from fastapi import HTTPException, Depends
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 
-from ..config import settings
+from config import settings
 
 logger = logging.getLogger("meteormate." + __name__)
 
