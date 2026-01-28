@@ -4,7 +4,7 @@
 from enum import Enum
 
 from sqlalchemy import Column, DateTime, Text, ForeignKey, func, Integer, Enum as SQLEnum
-from ..database import ORMBase
+from database import ORMBase
 
 class CodeType(str, Enum):
     PWD_RESET_CODE = "pwd_reset_code"

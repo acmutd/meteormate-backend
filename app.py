@@ -8,8 +8,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse, RedirectResponse
 
-from backend.config import settings
-from backend.routes import auth, survey, matches, cron, profiles
+from config import settings
+from routes import auth, survey, matches, cron, profiles
 
 
 def create_app() -> FastAPI:
