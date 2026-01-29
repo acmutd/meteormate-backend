@@ -2,6 +2,7 @@
 # ACM MeteorMate | All Rights Reserved
 
 import logging
+import sys
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -23,6 +24,10 @@ def create_app() -> FastAPI:
     # Logging
     logger = logging.getLogger("meteormate")
     logger.setLevel(logging.DEBUG if settings.DEBUG else logging.INFO)
+
+    handler = logging.StreamHandler(sys.stdout)
+    handler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
+    logger.addHandler(handler)
 
     # Middleware
     app.add_middleware(
