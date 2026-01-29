@@ -46,6 +46,19 @@ def get_db():
 def commit_or_raise(
     db: Session, route_logger: logging.Logger, resource: str = "", uid: str = "", action: str = ""
 ):
+    '''
+    Commits the current transaction to the database session and handles exceptions.
+    Args:
+        db (Session): The SQLAlchemy database session.
+        route_logger (logging.Logger): Logger for logging route-specific messages.
+        resource (str): The resource being acted upon usually the db table name.
+        uid (str): The user ID associated with the action.
+        action (str): The action being performed *in present tense*. 
+    Raises:
+        NotFound: If a foreign key constraint is violated.
+        Conflict: If there is an integrity conflict with existing data.
+        InternalServerError: For any other unexpected database errors.
+    '''
     try:
         db.commit()
         route_logger.info(f"successfully completed {action} for {resource} (User: {uid})")
