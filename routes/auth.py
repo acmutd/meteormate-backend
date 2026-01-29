@@ -3,7 +3,7 @@
 
 import random
 import logging
-from datetime import datetime, timedelta, timezone
+from datetime import datetime
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
@@ -12,91 +12,14 @@ from firebase_admin import auth
 
 from database import get_db
 from models.user import User, UserRequestVerify, UserCompleteVerify, UserResetPassword
-from models.verification_codes import VerificationCodes, CodeType
-from utils.firebase_auth import get_current_user, get_firebase_user
+from utils.firebase_auth import get_current_user, get_firebase_and_uid
 from utils.email import send_verification_email
 from schemas.user import UserCreate, UserResponse
+from utils.verification_codes import create_verification_code, verify_code
 
 logger = logging.getLogger("meteormate." + __name__)
 
 router = APIRouter()
-
-
-async def get_firebase_and_uid(email: str = None, uid: str = None):
-    try:
-        if uid:
-            firebase_user = await get_firebase_user(uid)
-        elif email:
-            firebase_user = auth.get_user_by_email(email)
-        else:
-            raise ValueError("Either email or uid must be provided")
-        return firebase_user, firebase_user.uid
-    except auth.UserNotFoundError:
-        raise HTTPException(status_code=404, detail="User not found")
-    except Exception as e:
-        logger.error(str(e))
-        raise HTTPException(status_code=500, detail=f"Error fetching user")
-
-
-def create_verification_code(db: Session, uid: str, purpose: str) -> str:
-    code = str(random.randint(100000, 999999))
-    code_type = CodeType.PWD_RESET_CODE if purpose == "reset" else CodeType.ACC_VERIFICATION_CODE
-
-    new_code = VerificationCodes(user_id=uid, code=code, type=code_type)
-    try:
-        db.add(new_code)
-        db.commit()
-        logger.info(f"User {uid} created a verification code for purpose {purpose}")
-        return code
-
-    except SQLAlchemyError as e:
-        db.rollback()
-        logger.error(f"DB Error creating code for User {uid}: {str(e)}")
-        raise HTTPException(
-            status_code=500, detail="Internal server error creating verification code"
-        )
-
-
-def verify_code(db: Session, uid: str, code: str, purpose: str, consume: bool = False):
-    """
-    General helper func. for verifying 6-digit codes.
-    :param db: Database connection
-    :param uid: UID of the user in the request
-    :param code: 6-digit code provided by the user
-    :param purpose: Either `reset` for password reset or `verify` for email verification
-    :param consume: Whether to delete the code from the DB after the check (defaults to False)
-    """
-    code_type = CodeType.PWD_RESET_CODE.value if purpose == "reset" else CodeType.ACC_VERIFICATION_CODE.value
-
-    code_obj = db.query(VerificationCodes).filter(
-        VerificationCodes.user_id == uid, VerificationCodes.type == code_type
-    ).order_by(VerificationCodes.created_at.desc()).first()
-
-    expires_at = code_obj.created_at + timedelta(minutes=10)
-
-    if not code_obj:
-        logger.warning(
-            f"User {uid} attempted to {purpose}, but has no verification codes in the DB"
-        )
-        raise HTTPException(status_code=400, detail="No verification code found")
-    if datetime.now(timezone.utc) > expires_at:
-        logger.warning(f"User {uid} attempted to {purpose} with an expired verification code")
-        raise HTTPException(status_code=400, detail="Verification code expired")
-    if code_obj.code != code:
-        logger.warning(f"User {uid} attempted to {purpose} with an incorrect verification code")
-        raise HTTPException(status_code=400, detail="Invalid verification code")
-
-    if consume:
-        try:
-            db.delete(code_obj)
-            db.commit()
-            logger.info(
-                f"User {uid}'s verification code with purpose '{purpose}' was deleted from the DB"
-            )
-        except SQLAlchemyError as e:
-            db.rollback()
-            logger.error(f"DB Error consuming code for User {uid}: {str(e)}")
-            raise HTTPException(status_code=500, detail="Internal server error processing code")
 
 
 @router.post("/register", response_model=UserResponse)
@@ -170,7 +93,7 @@ async def send_verification_code(request: UserRequestVerify, db: Session = Depen
 
     logger.info(f"User {uid} requested a verification code email for purpose {purpose}")
 
-    code = create_verification_code(db, uid, request.purpose)
+    code = create_verification_code(db, logger, uid, request.purpose)
 
     try:
         send_verification_email(str(request.email), code)
@@ -186,7 +109,7 @@ async def send_verification_code(request: UserRequestVerify, db: Session = Depen
 @router.post("/verify-reset-code")
 async def verify_reset_code(request: UserCompleteVerify, db: Session = Depends(get_db)):
     _, uid = await get_firebase_and_uid(email=request.email)
-    verify_code(db, uid, request.code, purpose="reset")  # verify w/o deleting from DB
+    verify_code(db, logger, uid, request.code, purpose="reset")  # verify w/o deleting from DB
     logger.info(f"User {uid} successfully verified their password reset code")
     return {"message": "Code verified"}
 
