@@ -5,10 +5,11 @@ import logging
 import enum as py_enum
 
 from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
-from sqlalchemy.orm import declarative_base
+from sqlalchemy.orm import sessionmaker, declarative_base, Session
+from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 
 from config import settings
+from exceptions import Conflict, InternalServerError, NotFound
 
 logger = logging.getLogger("meteormate." + __name__)
 
@@ -40,3 +41,27 @@ def get_db():
         yield db
     finally:
         db.close()
+
+
+def commit_or_raise(
+    db: Session, route_logger: logging.Logger, resource: str = "", uid: str = "", action: str = ""
+):
+    try:
+        db.commit()
+        route_logger.info(f"successfully completed {action} for {resource} (User: {uid})")
+
+    except IntegrityError as e:
+        db.rollback()
+        err = str(e.orig).lower()
+
+        if "foreign key" in err:
+            route_logger.exception(f"{action} failed: foreign key violation on {resource} (User: {uid})")
+            raise NotFound(resource)
+
+        route_logger.exception(f"{action} failed: integrity conflict on {resource} (User: {uid})")
+        raise Conflict(f"{resource} conflicts with existing data")
+
+    except SQLAlchemyError:
+        db.rollback()
+        route_logger.exception(f"{action} failed: unexpected DB error on {resource} (User: {uid})")
+        raise InternalServerError(f"Internal server error while {action} {resource}")
