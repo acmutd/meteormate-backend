@@ -27,12 +27,10 @@ if not firebase_admin._apps:
 security = HTTPBearer()
 
 
-async def get_current_user(
-        credentials: HTTPAuthorizationCredentials = Depends(security)):
+async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)):
     if credentials.credentials == settings.ADMIN_BEARER:
         if not settings.DEBUG:
-            raise HTTPException(status_code=403,
-                                detail="Admin bypass only in DEBUG mode")
+            raise HTTPException(status_code=403, detail="Admin bypass only in DEBUG mode")
         return {"id": settings.ADMIN_UID, "uid": settings.ADMIN_UID}
 
     try:
@@ -46,12 +44,10 @@ async def get_current_user(
 
     except auth.ExpiredIdTokenError:
         logger.warning("Auth failed: Token Expired")
-        raise HTTPException(status_code=401,
-                            detail="Firebase token has expired")
+        raise HTTPException(status_code=401, detail="Firebase token has expired")
     except auth.RevokedIdTokenError:
         logger.warning("Auth failed: Token Revoked")
-        raise HTTPException(status_code=401,
-                            detail="Firebase token has been revoked")
+        raise HTTPException(status_code=401, detail="Firebase token has been revoked")
     except auth.InvalidIdTokenError as e:
         logger.warning(f"Auth failed: Invalid Token - {str(e)}")
         raise HTTPException(status_code=401, detail=f"Invalid Firebase token")
@@ -69,5 +65,20 @@ async def get_firebase_user(uid: str):
         raise HTTPException(status_code=404, detail="Firebase user not found")
     except Exception as e:
         logger.error(f"Error fetching Firebase user {uid}: {str(e)}")
-        raise HTTPException(status_code=500,
-                            detail="Error fetching Firebase user")
+        raise HTTPException(status_code=500, detail="Error fetching Firebase user")
+
+
+async def get_firebase_and_uid(email: str = None, uid: str = None):
+    try:
+        if uid:
+            firebase_user = await get_firebase_user(uid)
+        elif email:
+            firebase_user = auth.get_user_by_email(email)
+        else:
+            raise ValueError("Either email or uid must be provided")
+        return firebase_user, firebase_user.uid
+    except auth.UserNotFoundError:
+        raise HTTPException(status_code=404, detail="User not found")
+    except Exception as e:
+        logger.error(str(e))
+        raise HTTPException(status_code=500, detail=f"Error fetching user")
