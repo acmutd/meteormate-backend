@@ -1,5 +1,4 @@
 import io
-from fastapi import HTTPException
 from firebase_admin import storage
 from google.cloud import exceptions
 from PIL import Image, ImageOps, UnidentifiedImageError
