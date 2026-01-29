@@ -66,13 +66,12 @@ def verify_code(db: Session, uid: str, code: str, purpose: str, consume: bool = 
     :param purpose: Either `reset` for password reset or `verify` for email verification
     :param consume: Whether to delete the code from the DB after the check (defaults to False)
     """
-    code_type = CodeType.PWD_RESET_CODE if purpose == "reset" else CodeType.ACC_VERIFICATION_CODE
+    code_type = CodeType.PWD_RESET_CODE.value if purpose == "reset" else CodeType.ACC_VERIFICATION_CODE.value
 
-    code_obj = db.query(VerificationCodes) \
-        .filter(VerificationCodes.user_id == uid, VerificationCodes.type == code_type) \
-        .order_by(VerificationCodes.created_at.desc()) \
-        .first()
-        
+    code_obj = db.query(VerificationCodes).filter(
+        VerificationCodes.user_id == uid, VerificationCodes.type == code_type
+    ).order_by(VerificationCodes.created_at.desc()).first()
+
     expires_at = code_obj.created_at + timedelta(minutes=10)
 
     if not code_obj:
