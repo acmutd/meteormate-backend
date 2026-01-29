@@ -21,7 +21,7 @@ def send_verification_email(email: str, code: str):
         msg['To'] = email
 
         # load the template using python modules with importlib
-        html = resources.files("backend.static").joinpath("email_template.html").read_text(
+        html = resources.files("static").joinpath("verification_code.html").read_text(
             encoding="utf-8"
         ).replace("{code}", code)
 
@@ -70,7 +70,7 @@ def send_inactive_notices(email: str, notice_num: int):
         msg['To'] = email
 
         # load the template using python modules with importlib
-        html = resources.files("backend.static").joinpath("reset_password.html").read_text(
+        html = resources.files("static").joinpath("reset_password.html").read_text(
             encoding="utf-8"
         ).replace("{inactivity_warning}", inactivity_warning)
 
