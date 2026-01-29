@@ -9,6 +9,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse, RedirectResponse
 
 from config import settings
+from exceptions import AppException
 from routes import auth, survey, matches, cron, profiles
 
 
@@ -34,9 +35,7 @@ def create_app() -> FastAPI:
 
     # Exception handling
     @app.exception_handler(RequestValidationError)
-    async def validation_exception_handler(
-            request: Request, exc: RequestValidationError
-    ):
+    async def validation_exception_handler(request: Request, exc: RequestValidationError):
         errors = []
         for error in exc.errors():
             field = error["loc"][-1] if error["loc"] else "unknown"
@@ -54,7 +53,17 @@ def create_app() -> FastAPI:
 
         return JSONResponse(
             status_code=422,
-            content={"error": "Validation failed", "details": errors},
+            content={
+                "error": "Validation failed",
+                "details": errors
+            },
+        )
+
+    @app.exception_handler(AppException)
+    async def app_exception_handler(request: Request, exc: AppException):
+        return JSONResponse(
+            status_code=exc.status_code,
+            content={"detail": exc.detail},
         )
 
     # Routes
@@ -62,9 +71,7 @@ def create_app() -> FastAPI:
     app.include_router(survey.router, prefix="/survey", tags=["survey"])
     app.include_router(matches.router, prefix="/matches", tags=["matches"])
     app.include_router(cron.router, prefix="/cron", tags=["cron"])
-    app.include_router(
-        profiles.router, prefix="/profiles", tags=["user_profiles"]
-    )
+    app.include_router(profiles.router, prefix="/profiles", tags=["user_profiles"])
 
     @app.get("")
     async def root_no_slash():
