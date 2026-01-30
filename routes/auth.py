@@ -8,6 +8,7 @@ from datetime import datetime, timezone
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 from firebase_admin import auth
+from firebase_admin.exceptions import FirebaseError
 
 from database import commit_or_raise, get_db
 from utils.exceptions import BadRequest, Conflict, InternalServerError, NotFound
@@ -72,6 +73,30 @@ async def get_current_user_profile(
     logger.info(f"User {uid} requested /me")
 
     return user
+
+
+@router.post("/delete")
+async def delete_user_account(
+    current_user_token=Depends(get_current_user), db: Session = Depends(get_db)
+):
+    uid = current_user_token.get("uid")
+
+    user = db.query(User).filter(User.id == uid).first()
+    if not user:
+        logger.warning(f"User {uid} not found in DB during account deletion")
+        raise NotFound("User")
+
+    try:
+        auth.delete_user(uid)
+    except FirebaseError as e:
+        logger.error(f"Error deleting User {uid} account: {str(e)}")
+        raise InternalServerError("Error deleting account")
+
+    db.delete(user)
+    commit_or_raise(db, logger, resource="user", uid=uid, action="delete")
+    logger.info(f"User {uid} successfully deleted their account")
+
+    return {"message": "Account deleted successfully"}
 
 
 @router.post("/send-verification-code")
