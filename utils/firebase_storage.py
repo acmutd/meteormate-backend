@@ -1,3 +1,6 @@
+# Created by Atharva Mishra | 1/30/2026
+# ACM MeteorMate | All Rights Reserved
+
 import io
 from firebase_admin import storage
 from google.cloud import exceptions

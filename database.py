@@ -1,4 +1,5 @@
 # Created by Ryan Polasky | 7/12/25
+# Heavily modified by Atharva Mishra
 # ACM MeteorMate | All Rights Reserved
 
 import logging
@@ -68,7 +69,9 @@ def commit_or_raise(
         err = str(e.orig).lower()
 
         if "foreign key" in err:
-            route_logger.exception(f"{action} failed: foreign key violation on {resource} (User: {uid})")
+            route_logger.exception(
+                f"{action} failed: foreign key violation on {resource} (User: {uid})"
+            )
             raise NotFound(resource)
 
         route_logger.exception(f"{action} failed: integrity conflict on {resource} (User: {uid})")

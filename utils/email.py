@@ -1,4 +1,5 @@
 # Created by Ryan Polasky | 10/22/25
+# Heavily modified by Atharva Mishra
 # ACM MeteorMate | All Rights Reserved
 
 import smtplib

@@ -1,3 +1,7 @@
+# Created by Atharva Mishra | 1/30/2026
+# ACM MeteorMate | All Rights Reserved
+
+
 class AppException(Exception):
     status_code: int = 0
     detail: str = "Error Details Here"
