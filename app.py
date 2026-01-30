@@ -1,7 +1,9 @@
 # Created by Ryan Polasky | 7/12/25
+# Heavily modified by Atharva Mishra
 # ACM MeteorMate | All Rights Reserved
 
 import logging
+import sys
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -9,6 +11,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse, RedirectResponse
 
 from config import settings
+from utils.exceptions import AppException
 from routes import auth, survey, matches, cron, profiles
 
 
@@ -23,6 +26,10 @@ def create_app() -> FastAPI:
     logger = logging.getLogger("meteormate")
     logger.setLevel(logging.DEBUG if settings.DEBUG else logging.INFO)
 
+    handler = logging.StreamHandler(sys.stdout)
+    handler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
+    logger.addHandler(handler)
+
     # Middleware
     app.add_middleware(
         CORSMiddleware,
@@ -34,9 +41,7 @@ def create_app() -> FastAPI:
 
     # Exception handling
     @app.exception_handler(RequestValidationError)
-    async def validation_exception_handler(
-            request: Request, exc: RequestValidationError
-    ):
+    async def validation_exception_handler(request: Request, exc: RequestValidationError):
         errors = []
         for error in exc.errors():
             field = error["loc"][-1] if error["loc"] else "unknown"
@@ -54,7 +59,17 @@ def create_app() -> FastAPI:
 
         return JSONResponse(
             status_code=422,
-            content={"error": "Validation failed", "details": errors},
+            content={
+                "error": "Validation failed",
+                "details": errors
+            },
+        )
+
+    @app.exception_handler(AppException)
+    async def app_exception_handler(request: Request, exc: AppException):
+        return JSONResponse(
+            status_code=exc.status_code,
+            content={"detail": exc.detail},
         )
 
     # Routes
@@ -62,9 +77,7 @@ def create_app() -> FastAPI:
     app.include_router(survey.router, prefix="/survey", tags=["survey"])
     app.include_router(matches.router, prefix="/matches", tags=["matches"])
     app.include_router(cron.router, prefix="/cron", tags=["cron"])
-    app.include_router(
-        profiles.router, prefix="/profiles", tags=["user_profiles"]
-    )
+    app.include_router(profiles.router, prefix="/profiles", tags=["user_profiles"])
 
     @app.get("")
     async def root_no_slash():

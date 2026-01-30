@@ -1,39 +1,36 @@
 # Created by Ryan Polasky | 10/22/25
+# Heavily modified by Atharva Mishra
 # ACM MeteorMate | All Rights Reserved
 
 import smtplib
 from importlib import resources
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
-from fastapi import HTTPException
 
 from config import settings
+from utils.exceptions import InternalServerError
 
 
 # noinspection DuplicatedCode
 def send_verification_email(email: str, code: str):
     """Send verification code via email with MeteorMate branding"""
-    try:
-        # create message
-        msg = MIMEMultipart('alternative')
-        msg['Subject'] = '🌟 Verify Your MeteorMate Account'
-        msg['From'] = settings.EMAIL_USER
-        msg['To'] = email
+    # create message
+    msg = MIMEMultipart('alternative')
+    msg['Subject'] = '🌟 Verify Your MeteorMate Account'
+    msg['From'] = settings.EMAIL_USER
+    msg['To'] = email
 
-        # load the template using python modules with importlib
-        html = resources.files("static").joinpath("verification_code.html").read_text(
-            encoding="utf-8"
-        ).replace("{code}", code)
+    # load the template using python modules with importlib
+    html = resources.files("static").joinpath("verification_code.html").read_text(
+        encoding="utf-8"
+    ).replace("{code}", code)
 
-        msg.attach(MIMEText(html, 'html'))
+    msg.attach(MIMEText(html, 'html'))
 
-        # send email via SMTP
-        with smtplib.SMTP_SSL(settings.SMTP_SERVER, settings.SMTP_PORT) as server:
-            server.login(settings.EMAIL_USER, settings.EMAIL_PASSWORD)
-            server.sendmail(settings.EMAIL_USER, email, msg.as_string())
-
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to send email: {str(e)}")
+    # send email via SMTP
+    with smtplib.SMTP_SSL(settings.SMTP_SERVER, settings.SMTP_PORT) as server:
+        server.login(settings.EMAIL_USER, settings.EMAIL_PASSWORD)
+        server.sendmail(settings.EMAIL_USER, email, msg.as_string())
 
 
 def send_inactive_notices(email: str, notice_num: int):
@@ -82,4 +79,4 @@ def send_inactive_notices(email: str, notice_num: int):
             server.sendmail(settings.EMAIL_USER, email, msg.as_string())
 
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to send email: {str(e)}")
+        raise InternalServerError(f"Failed to send email: {str(e)}")
