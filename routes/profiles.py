@@ -7,7 +7,7 @@ import logging
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
-from exceptions import Conflict, NotFound
+from utils.exceptions import Conflict, NotFound
 from utils.firebase_storage import upload_profile_picture
 
 from database import commit_or_raise, get_db

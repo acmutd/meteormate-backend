@@ -10,7 +10,7 @@ from sqlalchemy.orm import Session
 from firebase_admin import auth
 
 from database import commit_or_raise, get_db
-from exceptions import BadRequest, Conflict, InternalServerError, NotFound
+from utils.exceptions import BadRequest, Conflict, InternalServerError, NotFound
 from models.user import User, UserRequestVerify, UserCompleteVerify, UserResetPassword
 from utils.firebase_auth import get_current_user, get_firebase_and_uid
 from utils.email import send_verification_email

@@ -11,7 +11,7 @@ from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from psycopg2.errors import ForeignKeyViolation
 
 from config import settings
-from exceptions import Conflict, InternalServerError, NotFound
+from utils.exceptions import Conflict, InternalServerError, NotFound
 
 logger = logging.getLogger("meteormate." + __name__)
 

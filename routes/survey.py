@@ -8,7 +8,7 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
 from database import commit_or_raise, get_db
-from exceptions import BadRequest, NotFound
+from utils.exceptions import BadRequest, NotFound
 from models.survey import Survey
 from models.user import User
 from schemas.survey import SurveyCreate, SurveyResponse, SurveyUpdate

@@ -11,7 +11,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse, RedirectResponse
 
 from config import settings
-from exceptions import AppException
+from utils.exceptions import AppException
 from routes import auth, survey, matches, cron, profiles
 
 

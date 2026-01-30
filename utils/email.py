@@ -8,7 +8,7 @@ from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 
 from config import settings
-from exceptions import InternalServerError
+from utils.exceptions import InternalServerError
 
 
 # noinspection DuplicatedCode

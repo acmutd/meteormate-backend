@@ -10,7 +10,7 @@ from fastapi import Depends
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 
 from config import settings
-from exceptions import Forbidden, InternalServerError, NotFound, Unauthorized
+from utils.exceptions import Forbidden, InternalServerError, NotFound, Unauthorized
 
 logger = logging.getLogger("meteormate." + __name__)
 

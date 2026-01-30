@@ -9,7 +9,7 @@ from datetime import datetime
 from pydantic import BaseModel, field_validator, model_validator
 
 from config import settings
-from exceptions import BadRequest, UnprocessableEntity
+from utils.exceptions import BadRequest, UnprocessableEntity
 
 Gender = Literal["female", "male", "non_binary", "prefer_not_to_say", "other"]
 Classification = Literal["freshman", "sophomore", "junior", "senior", "graduate"]

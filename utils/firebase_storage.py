@@ -6,7 +6,7 @@ from firebase_admin import storage
 from google.cloud import exceptions
 from PIL import Image, ImageOps, UnidentifiedImageError
 
-from exceptions import Forbidden, NotFound, UnprocessableEntity
+from utils.exceptions import Forbidden, NotFound, UnprocessableEntity
 
 
 # function normalizes color type for the image and converts image bytes to webp bytes

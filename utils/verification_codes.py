@@ -8,7 +8,7 @@ from datetime import datetime, timedelta, timezone
 from sqlalchemy.orm import Session
 
 from database import commit_or_raise
-from exceptions import BadRequest
+from utils.exceptions import BadRequest
 from models.verification_codes import CodeType, VerificationCodes
 
 
