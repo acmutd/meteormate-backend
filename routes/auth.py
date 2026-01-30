@@ -146,7 +146,7 @@ async def verify_email(request: UserCompleteVerify, db: Session = Depends(get_db
         raise InternalServerError("Error updating user")
 
     # keep this doubled/consuming AFTER Firebase checks to avoid codes being expired by Firebase errors
-    verify_code(db, uid, request.code, purpose="verify", consume=True)  # verify & consume
+    verify_code(db, logger, uid, request.code, purpose="verify", consume=True)  # verify & consume
 
     logger.info(f"User {uid} successfully verified their email")
     return {"message": "Email verified successfully"}
