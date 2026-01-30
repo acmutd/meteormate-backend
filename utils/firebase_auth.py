@@ -6,11 +6,11 @@ import logging
 
 import firebase_admin
 from firebase_admin import credentials, auth
-from fastapi import HTTPException, Depends
+from fastapi import Depends
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 
 from config import settings
-from exceptions import InternalServerError, NotFound, Unauthorized
+from exceptions import Forbidden, InternalServerError, NotFound, Unauthorized
 
 logger = logging.getLogger("meteormate." + __name__)
 
@@ -32,7 +32,7 @@ security = HTTPBearer()
 async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)):
     if credentials.credentials == settings.ADMIN_BEARER:
         if not settings.DEBUG:
-            raise HTTPException(status_code=403, detail="Admin bypass only in DEBUG mode")
+            raise Forbidden("Admin bypass only in DEBUG mode")
         return {"id": settings.ADMIN_UID, "uid": settings.ADMIN_UID}
 
     try:

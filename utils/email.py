@@ -6,9 +6,9 @@ import smtplib
 from importlib import resources
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
-from fastapi import HTTPException
 
 from config import settings
+from exceptions import InternalServerError
 
 
 # noinspection DuplicatedCode
@@ -79,4 +79,4 @@ def send_inactive_notices(email: str, notice_num: int):
             server.sendmail(settings.EMAIL_USER, email, msg.as_string())
 
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to send email: {str(e)}")
+        raise InternalServerError(f"Failed to send email: {str(e)}")
