@@ -8,6 +8,7 @@ import enum as py_enum
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, declarative_base, Session
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
+from psycopg2.errors import ForeignKeyViolation
 
 from config import settings
 from exceptions import Conflict, InternalServerError, NotFound
@@ -60,15 +61,18 @@ def commit_or_raise(
         Conflict: If there is an integrity conflict with existing data.
         InternalServerError: For any other unexpected database errors.
     '''
+    if uid == "":
+        uid = "annonymous"
+
     try:
         db.commit()
         route_logger.info(f"successfully completed {action} for {resource} (User: {uid})")
 
     except IntegrityError as e:
         db.rollback()
-        err = str(e.orig).lower()
+        orig = e.orig
 
-        if "foreign key" in err:
+        if isinstance(orig, ForeignKeyViolation):
             route_logger.exception(
                 f"{action} failed: foreign key violation on {resource} (User: {uid})"
             )
