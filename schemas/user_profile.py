@@ -2,59 +2,29 @@
 # ACM MeteorMate | All Rights Reserved
 
 import base64
+import binascii
 from typing import List, Optional, Literal
 from datetime import datetime
 from pydantic import BaseModel, field_validator, model_validator
 
 from config import settings
-from exceptions import UnprocessableEntity
+from exceptions import BadRequest, UnprocessableEntity
 
 Gender = Literal["female", "male", "non_binary", "prefer_not_to_say", "other"]
 Classification = Literal["freshman", "sophomore", "junior", "senior", "graduate"]
 
 
-def validate_name(name, min_len, max_len, position):
-    if len(name) > settings.FIRST_NAME_MAX_LEN or len(name) < settings.FIRST_NAME_MIN_LEN:
-        raise ValueError(
-            f"User's {position} name must be between {min_len} and {max_len} characters (inclusive)"
-        )
-    if any(not char.isalpha() for char in name):
-        raise ValueError(f"User's {position} name cannot contain any numbers or special characters")
+def validate_name(name: str, min_len: int, max_len: int, position: str) -> str:
+    if not (min_len <= len(name) <= max_len):
+        raise BadRequest(f"{position} name must be between {min_len} and {max_len} characters")
+
+    if not name.isalpha():
+        raise BadRequest(f"{position} name cannot contain any numbers or special characters")
+
     return name
 
 
-class UserProfileCreate(BaseModel):
-    gender: Gender
-    major: str
-    classification: Classification
-    bio: str
-    profile_picture_url: Optional[List[str]] = None
-    first_name: str
-    last_name: str
-    age: int
-
-    class Config:
-        from_attributes = True
-
-    @field_validator("first_name")
-    def validate_first_name(cls, v) -> str:
-        return validate_name(v, settings.FIRST_NAME_MIN_LEN, settings.FIRST_NAME_MAX_LEN, "first")
-
-    @field_validator("last_name")
-    def validate_last_name(cls, v) -> str:
-        return validate_name(v, settings.LAST_NAME_MIN_LEN, settings.LAST_NAME_MAX_LEN, "last")
-
-    @field_validator("age")
-    def validate_age(cls, v):
-        if v < settings.MIN_AGE or v > settings.MAX_AGE:
-            raise ValueError(
-                f"User's age must be between {settings.MIN_AGE} and {settings.MAX_AGE} years"
-            )
-
-        return v
-
-
-class UserProfileUpdate(BaseModel):
+class UserProfileBase(BaseModel):
     gender: Optional[Gender] = None
     major: Optional[str] = None
     classification: Optional[Classification] = None
@@ -68,21 +38,45 @@ class UserProfileUpdate(BaseModel):
         from_attributes = True
 
     @field_validator("first_name")
-    def validate_first_name(cls, v) -> str:
+    @classmethod
+    def validate_first_name(cls, v):
+        if v is None:
+            return v
+
         return validate_name(v, settings.FIRST_NAME_MIN_LEN, settings.FIRST_NAME_MAX_LEN, "first")
 
     @field_validator("last_name")
-    def validate_last_name(cls, v) -> str:
+    @classmethod
+    def validate_last_name(cls, v):
+        if v is None:
+            return v
+
         return validate_name(v, settings.LAST_NAME_MIN_LEN, settings.LAST_NAME_MAX_LEN, "last")
 
     @field_validator("age")
+    @classmethod
     def validate_age(cls, v):
-        if v < settings.MIN_AGE or v > settings.MAX_AGE:
-            raise ValueError(
-                f"User's age must be between {settings.MIN_AGE} and {settings.MAX_AGE} years (inclusive)"
-            )
+        if v is None:
+            return v
+
+        if not (settings.MIN_AGE <= v <= settings.MAX_AGE):
+            raise BadRequest(f"age must be between {settings.MIN_AGE} and {settings.MAX_AGE} years")
 
         return v
+
+
+class UserProfileCreate(UserProfileBase):
+    gender: Gender
+    major: str
+    classification: Classification
+    bio: str
+    first_name: str
+    last_name: str
+    age: int
+
+
+class UserProfileUpdate(UserProfileBase):
+    pass
 
 
 class UserProfileResponse(BaseModel):
@@ -126,10 +120,10 @@ class UserProfilePicture(BaseModel):
 
         try:
             image_bytes = base64.b64decode(data, validate=True)
-        except (ValueError, base64.binascii.Error):
+        except (ValueError, binascii.Error):
             raise UnprocessableEntity("Image data has incorrect padding or invalid characters")
 
         values["ext"] = ext
         values["image_bytes"] = image_bytes
-        
+
         return values
