@@ -170,6 +170,8 @@ class Survey(Base):
         mm_enum(HaveLeaseLengthEnum, "have_lease_length_enum"), nullable=True
     )
 
+    
+
     # Catch-all
     answers = Column(
         JSONB,
