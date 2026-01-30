@@ -3,9 +3,8 @@
 
 import logging
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
-from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 
 from exceptions import Conflict, NotFound
 from utils.firebase_storage import upload_profile_picture

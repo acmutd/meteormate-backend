@@ -3,7 +3,6 @@ import random
 from datetime import datetime, timedelta, timezone
 
 from sqlalchemy.orm import Session
-from sqlalchemy.exc import SQLAlchemyError
 
 from database import commit_or_raise
 from exceptions import BadRequest

@@ -3,11 +3,10 @@
 
 import logging
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
-from sqlalchemy.exc import SQLAlchemyError
 
-from database import commit_or_raise, get_db, to_db
+from database import commit_or_raise, get_db
 from exceptions import BadRequest, NotFound
 from models.survey import Survey
 from models.user import User

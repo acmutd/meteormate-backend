@@ -1,14 +1,11 @@
 # Created by Ryan Polasky | 7/12/25
 # ACM MeteorMate | All Rights Reserved
 
-import random
 import logging
 from datetime import datetime, timezone
-import time
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
-from sqlalchemy.exc import SQLAlchemyError
 from firebase_admin import auth
 
 from database import commit_or_raise, get_db
@@ -167,7 +164,5 @@ def activity_ping(current_user_token=Depends(get_current_user), db: Session = De
     current_user.inactivity_notification_stage = None
 
     commit_or_raise(db, logger, resource="user", uid=current_user.id, action="update")
-
-    logger.info(f"User {current_user.id} updated last login")
 
     return {"status": "ok"}
