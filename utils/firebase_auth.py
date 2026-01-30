@@ -1,14 +1,16 @@
 # Created by Ryan Polasky | 7/12/25
+# Heavily modified by Atharva Mishra
 # ACM MeteorMate | All Rights Reserved
 
 import logging
 
 import firebase_admin
 from firebase_admin import credentials, auth
-from fastapi import HTTPException, Depends
+from fastapi import Depends
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 
 from config import settings
+from utils.exceptions import Forbidden, InternalServerError, NotFound, Unauthorized
 
 logger = logging.getLogger("meteormate." + __name__)
 
@@ -27,47 +29,65 @@ if not firebase_admin._apps:
 security = HTTPBearer()
 
 
-async def get_current_user(
-        credentials: HTTPAuthorizationCredentials = Depends(security)):
+async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)):
     if credentials.credentials == settings.ADMIN_BEARER:
         if not settings.DEBUG:
-            raise HTTPException(status_code=403,
-                                detail="Admin bypass only in DEBUG mode")
+            raise Forbidden("Admin bypass only in DEBUG mode")
         return {"id": settings.ADMIN_UID, "uid": settings.ADMIN_UID}
 
     try:
         # verify the firebase token
         decoded_token = auth.verify_id_token(credentials.credentials)
 
-        # SAFETY NET - Map 'uid' to 'id' for dumb devs (myself)
-        decoded_token["id"] = decoded_token["uid"]
+        # SAFETY NET - Map 'uid' to 'id' for dumb devs (myself & me)
+        decoded_token["id"] = decoded_token["uid"]  # this is never used btw
 
         return decoded_token
 
     except auth.ExpiredIdTokenError:
         logger.warning("Auth failed: Token Expired")
-        raise HTTPException(status_code=401,
-                            detail="Firebase token has expired")
+        raise Unauthorized("Firebase token has expired")
+
     except auth.RevokedIdTokenError:
         logger.warning("Auth failed: Token Revoked")
-        raise HTTPException(status_code=401,
-                            detail="Firebase token has been revoked")
+        raise Unauthorized("Firebase token has been revoked")
+
     except auth.InvalidIdTokenError as e:
         logger.warning(f"Auth failed: Invalid Token - {str(e)}")
-        raise HTTPException(status_code=401, detail=f"Invalid Firebase token")
+        raise Unauthorized("Invalid Firebase token")
+
     except Exception as e:
         logger.error(f"Unexpected authentication error: {str(e)}")
-        raise HTTPException(status_code=401, detail="Authentication error")
+        raise Unauthorized("Authentication error")
 
 
 async def get_firebase_user(uid: str):
     try:
         user = auth.get_user(uid)
         return user
+
     except auth.UserNotFoundError:
         logger.warning(f"Requested Firebase user {uid} not found")
-        raise HTTPException(status_code=404, detail="Firebase user not found")
+        raise NotFound("Firebase user")
+
     except Exception as e:
         logger.error(f"Error fetching Firebase user {uid}: {str(e)}")
-        raise HTTPException(status_code=500,
-                            detail="Error fetching Firebase user")
+        raise InternalServerError("Error fetching Firebase user")
+
+
+async def get_firebase_and_uid(email: str = None, uid: str = None):
+    try:
+        if uid:
+            firebase_user = await get_firebase_user(uid)
+        elif email:
+            firebase_user = auth.get_user_by_email(email)
+        else:
+            raise ValueError("Either email or uid must be provided")
+
+        return firebase_user, firebase_user.uid
+
+    except auth.UserNotFoundError:
+        raise NotFound("User")
+    except Exception as e:
+        logger.error(str(e))
+        raise InternalServerError("Error fetching user")

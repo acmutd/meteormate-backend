@@ -1,14 +1,17 @@
 # Created by Ryan Polasky | 7/12/25
+# Heavily modified by Atharva Mishra
 # ACM MeteorMate | All Rights Reserved
 
 import logging
 import enum as py_enum
 
 from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
-from sqlalchemy.orm import declarative_base
+from sqlalchemy.orm import sessionmaker, declarative_base, Session
+from sqlalchemy.exc import IntegrityError, SQLAlchemyError
+from psycopg2.errors import ForeignKeyViolation
 
 from config import settings
+from utils.exceptions import Conflict, InternalServerError, NotFound
 
 logger = logging.getLogger("meteormate." + __name__)
 
@@ -40,3 +43,45 @@ def get_db():
         yield db
     finally:
         db.close()
+
+
+def commit_or_raise(
+    db: Session, route_logger: logging.Logger, resource: str = "", uid: str = "", action: str = ""
+):
+    '''
+    Commits the current transaction to the database session and handles exceptions.
+    Args:
+        db (Session): The SQLAlchemy database session.
+        route_logger (logging.Logger): Logger for logging route-specific messages.
+        resource (str): The resource being acted upon usually the db table name.
+        uid (str): The user ID associated with the action.
+        action (str): The action being performed *in present tense*. 
+    Raises:
+        NotFound: If a foreign key constraint is violated.
+        Conflict: If there is an integrity conflict with existing data.
+        InternalServerError: For any other unexpected database errors.
+    '''
+    if uid == "":
+        uid = "annonymous"
+
+    try:
+        db.commit()
+        route_logger.info(f"successfully completed {action} for {resource} (User: {uid})")
+
+    except IntegrityError as e:
+        db.rollback()
+        orig = e.orig
+
+        if isinstance(orig, ForeignKeyViolation):
+            route_logger.exception(
+                f"{action} failed: foreign key violation on {resource} (User: {uid})"
+            )
+            raise NotFound(resource)
+
+        route_logger.exception(f"{action} failed: integrity conflict on {resource} (User: {uid})")
+        raise Conflict(f"{resource} conflicts with existing data")
+
+    except SQLAlchemyError:
+        db.rollback()
+        route_logger.exception(f"{action} failed: unexpected DB error on {resource} (User: {uid})")
+        raise InternalServerError(f"Internal server error while {action} {resource}")

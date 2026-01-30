@@ -1,161 +1,77 @@
 # Created by Ryan Polasky | 7/12/25
+# Heavily modified by Atharva Mishra
 # ACM MeteorMate | All Rights Reserved
 
-import random
 import logging
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
-from sqlalchemy.exc import SQLAlchemyError
 from firebase_admin import auth
 
-from database import get_db
+from database import commit_or_raise, get_db
+from utils.exceptions import BadRequest, Conflict, InternalServerError, NotFound
 from models.user import User, UserRequestVerify, UserCompleteVerify, UserResetPassword
-from models.verification_codes import VerificationCodes, CodeType
-from utils.firebase_auth import get_current_user, get_firebase_user
+from utils.firebase_auth import get_current_user, get_firebase_and_uid
 from utils.email import send_verification_email
 from schemas.user import UserCreate, UserResponse
+from utils.verification_codes import create_verification_code, verify_code
 
 logger = logging.getLogger("meteormate." + __name__)
 
 router = APIRouter()
 
 
-async def get_firebase_and_uid(email: str = None, uid: str = None):
-    try:
-        if uid:
-            firebase_user = await get_firebase_user(uid)
-        elif email:
-            firebase_user = auth.get_user_by_email(email)
-        else:
-            raise ValueError("Either email or uid must be provided")
-        return firebase_user, firebase_user.uid
-    except auth.UserNotFoundError:
-        raise HTTPException(status_code=404, detail="User not found")
-    except Exception as e:
-        logger.error(str(e))
-        raise HTTPException(status_code=500, detail=f"Error fetching user")
-
-
-def create_verification_code(db: Session, uid: str, purpose: str) -> str:
-    code = str(random.randint(100000, 999999))
-    code_type = CodeType.PWD_RESET_CODE if purpose == "reset" else CodeType.ACC_VERIFICATION_CODE
-
-    new_code = VerificationCodes(user_id=uid, code=code, type=code_type)
-    try:
-        db.add(new_code)
-        db.commit()
-        logger.info(f"User {uid} created a verification code for purpose {purpose}")
-        return code
-
-    except SQLAlchemyError as e:
-        db.rollback()
-        logger.error(f"DB Error creating code for User {uid}: {str(e)}")
-        raise HTTPException(
-            status_code=500, detail="Internal server error creating verification code"
-        )
-
-
-def verify_code(db: Session, uid: str, code: str, purpose: str, consume: bool = False):
-    """
-    General helper func. for verifying 6-digit codes.
-    :param db: Database connection
-    :param uid: UID of the user in the request
-    :param code: 6-digit code provided by the user
-    :param purpose: Either `reset` for password reset or `verify` for email verification
-    :param consume: Whether to delete the code from the DB after the check (defaults to False)
-    """
-    code_type = CodeType.PWD_RESET_CODE if purpose == "reset" else CodeType.ACC_VERIFICATION_CODE
-
-    code_obj = db.query(VerificationCodes) \
-        .filter(VerificationCodes.user_id == uid, VerificationCodes.type == code_type) \
-        .order_by(VerificationCodes.created_at.desc()) \
-        .first()
-        
-    expires_at = code_obj.created_at + timedelta(minutes=10)
-
-    if not code_obj:
-        logger.warning(
-            f"User {uid} attempted to {purpose}, but has no verification codes in the DB"
-        )
-        raise HTTPException(status_code=400, detail="No verification code found")
-    if datetime.now(timezone.utc) > expires_at:
-        logger.warning(f"User {uid} attempted to {purpose} with an expired verification code")
-        raise HTTPException(status_code=400, detail="Verification code expired")
-    if code_obj.code != code:
-        logger.warning(f"User {uid} attempted to {purpose} with an incorrect verification code")
-        raise HTTPException(status_code=400, detail="Invalid verification code")
-
-    if consume:
-        try:
-            db.delete(code_obj)
-            db.commit()
-            logger.info(
-                f"User {uid}'s verification code with purpose '{purpose}' was deleted from the DB"
-            )
-        except SQLAlchemyError as e:
-            db.rollback()
-            logger.error(f"DB Error consuming code for User {uid}: {str(e)}")
-            raise HTTPException(status_code=500, detail="Internal server error processing code")
-
-
 @router.post("/register", response_model=UserResponse)
 async def register_user(user_data: UserCreate, db: Session = Depends(get_db)):
     if db.query(User).filter(User.utd_id == user_data.utd_id).first() \
-       or db.query(User).filter(User.email == user_data.email).first():
-        logger.warning("A user tried to create an account, but the email/Net ID was already in use")
-        raise HTTPException(status_code=400, detail="Account already exists")
+        or db.query(User).filter(User.email == user_data.email).first():
+
+        logger.warning("user tried to create an account with an existing email/Net ID in DB")
+        raise Conflict("Account already exists")
+
+    firebase_user = None
 
     try:
         firebase_user = auth.create_user(
             email=user_data.email, password=user_data.password, email_verified=False
         )
 
-        new_user = User(
-            id=firebase_user.uid,
-            email=user_data.email,
-            utd_id=user_data.utd_id,
-        )
+        new_user = User(id=firebase_user.uid, email=user_data.email, utd_id=user_data.utd_id)
 
         db.add(new_user)
-        db.commit()
+
+        commit_or_raise(db, logger, resource="user", uid=new_user.id, action="create")
+
         db.refresh(new_user)
         return new_user
-    except auth.EmailAlreadyExistsError:
-        logger.warning("A user tried to create an account, but the email/Net ID was already in use")
-        raise HTTPException(status_code=400, detail="Account already exists")
-    except Exception as e:
-        db.rollback()
-        if 'firebase_user' in locals():
+
+    except Exception:
+        if firebase_user is not None:
             try:
                 auth.delete_user(firebase_user.uid)
-            except:  # noqa
-                pass
-        logger.error(f"A user tried to create an account, but an error occurred: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Error creating user")
+                logger.info(f"rolled back Firebase user {firebase_user.uid} after DB failure")
+            except Exception:
+                logger.exception("failed to rollback Firebase user")
+
+        raise  # re-raise the original exception
 
 
 @router.get("/me", response_model=UserResponse)
 async def get_current_user_profile(
     current_user_token=Depends(get_current_user), db: Session = Depends(get_db)
 ):
-    try:
-        uid = current_user_token.get("uid")
+    uid = current_user_token.get("uid")
 
-        user = db.query(User).filter(User.id == uid).first()
+    user = db.query(User).filter(User.id == uid).first()
 
-        if not user:
-            logger.warning(f"/me was requested, but the provided user does not exist")
-            raise HTTPException(status_code=404, detail="User not found")
+    if not user:
+        logger.warning(f"User {uid} not found in DB during /me request")
+        raise NotFound("User")
 
-        logger.info(f"User {uid} requested /me")
+    logger.info(f"User {uid} requested /me")
 
-        return user
-
-    except SQLAlchemyError as e:
-        logger.error(f"Database error fetching profile for User {uid}: {str(e)}")
-        raise HTTPException(status_code=500, detail="Database error")
+    return user
 
 
 @router.post("/send-verification-code")
@@ -165,30 +81,35 @@ async def send_verification_code(request: UserRequestVerify, db: Session = Depen
     purpose = request.purpose
 
     if purpose == "verify" and firebase_user.email_verified:
-        raise HTTPException(status_code=400, detail="Email already verified")
+        raise BadRequest("Email already verified")
     if purpose == "reset" and not firebase_user.email_verified:
-        raise HTTPException(status_code=400, detail="Email not verified yet")
+        raise BadRequest("Email not verified yet")
 
-    logger.info(f"User {uid} requested a verification code email for purpose {purpose}")
+    logger.info(f"User {uid} requested a verification code for purpose {purpose}")
 
-    code = create_verification_code(db, uid, request.purpose)
+    code = create_verification_code(db, logger, uid, request.purpose)
 
     try:
         send_verification_email(str(request.email), code)
         logger.info(f"Successfully sent User {uid} an email for purpose {purpose}")
         return {"message": "Verification code sent to email"}
+
     except Exception as e:
         db.rollback()
         logger.error(f"There was an error sending an email to User {uid}: {str(e)}")
-        raise HTTPException(status_code=500, detail="Failed to send verification code")
+
+        raise InternalServerError("Failed to send verification code")
 
 
 # this is called immediately upon user trying to reset password but NO "new password" is asked for/received
 @router.post("/verify-reset-code")
 async def verify_reset_code(request: UserCompleteVerify, db: Session = Depends(get_db)):
     _, uid = await get_firebase_and_uid(email=request.email)
-    verify_code(db, uid, request.code, purpose="reset")  # verify w/o deleting from DB
+
+    verify_code(db, logger, uid, request.code, purpose="reset")  # verify w/o deleting from DB
+
     logger.info(f"User {uid} successfully verified their password reset code")
+
     return {"message": "Code verified"}
 
 
@@ -197,17 +118,17 @@ async def verify_reset_code(request: UserCompleteVerify, db: Session = Depends(g
 async def reset_password(request: UserResetPassword, db: Session = Depends(get_db)):
     _, uid = await get_firebase_and_uid(email=request.email)
     # code gets verified a second time, consuming it this time
-    verify_code(db, uid, request.code, purpose="reset")  # don't delete the code after use
+    verify_code(db, logger, uid, request.code, purpose="reset")  # don't delete the code after use
 
     try:
         auth.update_user(uid, password=request.new_password)
     except Exception as e:
         logger.error(f"There was an error updating User {uid}'s password: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Error updating password")
+        raise InternalServerError("Error updating password")
 
     # we eat the code AFTER Firebase runs w/o a hitch to avoid invalidating the code
     # after an unsuccessful attempt
-    verify_code(db, uid, request.code, purpose="reset", consume=True)
+    verify_code(db, logger, uid, request.code, purpose="reset", consume=True)
 
     logger.info(f"User {uid} successfully updated their password")
     return {"message": "Password updated successfully"}
@@ -222,7 +143,7 @@ async def verify_email(request: UserCompleteVerify, db: Session = Depends(get_db
         auth.update_user(uid, email_verified=True)
     except Exception as e:
         logger.error(f"There was an error verifying User {uid}'s email: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Error updating user")
+        raise InternalServerError("Error updating user")
 
     # keep this doubled/consuming AFTER Firebase checks to avoid codes being expired by Firebase errors
     verify_code(db, uid, request.code, purpose="verify", consume=True)  # verify & consume
@@ -231,16 +152,18 @@ async def verify_email(request: UserCompleteVerify, db: Session = Depends(get_db
     return {"message": "Email verified successfully"}
 
 
-@router.post("/activity-ping")
-def activity_ping(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
-    try:
-        current_user.updated_at = datetime.utcnow()
-        current_user.inactivity_notification_stage = None
-        db.commit()
-        logger.info(f"User {current_user.id} updated last login")
-        return {"status": "ok"}
+@router.get("/activity-ping")
+def activity_ping(current_user_token=Depends(get_current_user), db: Session = Depends(get_db)):
+    uid = current_user_token.get("uid")
 
-    except SQLAlchemyError as e:
-        db.rollback()
-        logger.error(f"Failed to update activity for User {current_user.id}: {str(e)}")
-        raise HTTPException(status_code=500, detail="Database error during activity ping")
+    current_user = db.query(User).filter(User.id == uid).first()
+    if not current_user:
+        logger.warning(f"User {uid} not found in DB during activity ping")
+        raise NotFound("User")
+
+    current_user.updated_at = datetime.now(timezone.utc)
+    current_user.inactivity_notification_stage = None
+
+    commit_or_raise(db, logger, resource="user", uid=current_user.id, action="update")
+
+    return {"status": "ok"}
