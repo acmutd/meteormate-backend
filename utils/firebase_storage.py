@@ -5,7 +5,8 @@ from PIL import Image, ImageOps, UnidentifiedImageError
 
 from exceptions import Forbidden, NotFound, UnprocessableEntity
 
-# function normalizes color type for the image and converts image bytes to webp bytes 
+
+# function normalizes color type for the image and converts image bytes to webp bytes
 def process_image(image_bytes: bytes) -> bytes:
     try:
         with Image.open(io.BytesIO(image_bytes)) as img:
@@ -15,13 +16,7 @@ def process_image(image_bytes: bytes) -> bytes:
                 img = img.convert("RGB")
 
             buffer = io.BytesIO()
-            img.save(
-                buffer,
-                format="WEBP",
-                quality=80,
-                method=6,
-                optimize=True,
-            )
+            img.save(buffer, format="WEBP", quality=80, method=6, optimize=True)
 
             return buffer.getvalue()
 
