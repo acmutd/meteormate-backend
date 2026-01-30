@@ -137,7 +137,7 @@ async def reset_password(request: UserResetPassword, db: Session = Depends(get_d
 @router.post("/verify-email")
 async def verify_email(request: UserCompleteVerify, db: Session = Depends(get_db)):
     _, uid = await get_firebase_and_uid(email=request.email)
-    verify_code(db, uid, request.code, purpose="verify")  # verify w/o deletion'
+    verify_code(db, logger, uid, request.code, purpose="verify")  # verify w/o deletion'
 
     try:
         auth.update_user(uid, email_verified=True)
@@ -146,7 +146,7 @@ async def verify_email(request: UserCompleteVerify, db: Session = Depends(get_db
         raise InternalServerError("Error updating user")
 
     # keep this doubled/consuming AFTER Firebase checks to avoid codes being expired by Firebase errors
-    verify_code(db, uid, request.code, purpose="verify", consume=True)  # verify & consume
+    verify_code(db, logger, uid, request.code, purpose="verify", consume=True)  # verify & consume
 
     logger.info(f"User {uid} successfully verified their email")
     return {"message": "Email verified successfully"}
