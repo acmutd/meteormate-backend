@@ -61,7 +61,7 @@ DEBUG=true
 
 **Run the server:**
 ```bash
-python -m backend.main
+python main.py
 ```
 
 **Formatting:**
