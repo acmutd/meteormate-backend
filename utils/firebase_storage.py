@@ -37,9 +37,13 @@ def process_image(image_bytes: bytes) -> bytes:
 
 def upload_profile_picture(data: bytes, blob_path: str) -> str:
     """
-    Function to upload a profile pic based on its base64 data
-    Returns: public download url to that image
-    Raises: HTTP Exceptions for either 422, 404, or 403
+    Function to upload a profile pic based on its base64 data abd blob path
+    Args:
+        data (bytes): Image data in bytes
+        blob_path (str): Path in firebase storage bucket to upload the image to
+    Returns:
+        str: Public URL of the uploaded image
+    Raises: HTTP Exceptions for either 404 or 403
     """
     try:
         image_bytes = process_image(data)
@@ -52,6 +56,50 @@ def upload_profile_picture(data: bytes, blob_path: str) -> str:
         blob.make_public()
 
         return blob.public_url
+
+    except exceptions.NotFound:
+        raise NotFound("Storage bucket")
+
+    except exceptions.Forbidden:
+        raise Forbidden("Access to storage bucket denied")
+
+
+def delete_profile_picture(blob_path: str):
+    """
+    Function to delete a profile picture from firebase storage based on its blob path
+    Args:
+        blob_path (str): Path in firebase storage bucket to delete the image from
+    Raises: HTTP Exceptions for either 404 or 403
+    """
+    try:
+        bucket = storage.bucket()
+        blob = bucket.blob(blob_path)
+
+        if not blob.exists():
+            raise NotFound("Profile picture")
+
+        blob.delete()
+
+    except exceptions.NotFound:
+        raise NotFound("Storage bucket")
+
+    except exceptions.Forbidden:
+        raise Forbidden("Access to storage bucket denied")
+
+
+def delete_all_profile_pictures(user_id: str):
+    """
+    Function to delete all profile pictures of a user from firebase storage
+    Args:
+        user_id (str): User ID whose profile pictures are to be deleted
+    Raises: HTTP Exceptions for either 404 or 403
+    """
+    try:
+        bucket = storage.bucket()
+        blobs = bucket.list_blobs(prefix=f"profile-pictures/{user_id}/")
+
+        for blob in blobs:
+            blob.delete()
 
     except exceptions.NotFound:
         raise NotFound("Storage bucket")
