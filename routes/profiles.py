@@ -8,7 +8,7 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
 from utils.exceptions import BadRequest, Conflict, NotFound
-from utils.firebase_storage import upload_profile_picture
+from utils.firebase_storage import upload_profile_picture, delete_profile_picture
 
 from database import commit_or_raise, get_db
 from models.user_profile import UserProfile
@@ -95,7 +95,7 @@ async def upload_profile_pic(
         raise NotFound("User profile")
 
     img_id = str(uuid.uuid4())
-    blob_path = f"profile-pictures/{uid}/{img_id}.webp"
+    blob_path = f"profile_pictures/{uid}/{img_id}.webp"
 
     # raises http exceptions do not catch
     profile_pic_url = upload_profile_picture(image_data.image_bytes, blob_path)
@@ -124,6 +124,11 @@ async def delete_profile_pic(
     if index < 0 or index >= len(profile.profile_picture_url):
         logger.warning(f"invalid picture index {index} for User {uid}")
         raise BadRequest("Index out-of-bounds for profile pictures")  # kinda funny ngl
+
+    file_name = profile.profile_picture_url[index].split("/")[-1]
+
+    # firebase storage helper don't confuse with endpoint function (also don't catch exceptions from this)
+    delete_profile_picture(f"profile_pictures/{uid}/{file_name}")
 
     # Remove the picture URL from the list
     profile.profile_picture_url.pop(index)
