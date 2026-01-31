@@ -93,7 +93,22 @@ async def delete_user_account(
         raise InternalServerError("Error deleting account")
 
     db.delete(user)
-    commit_or_raise(db, logger, resource="user", uid=uid, action="delete")
+    # commit_or_raise(db, logger, resource="user", uid=uid, action="delete")
+
+    try:
+        db.commit()
+    except Exception as e:
+        db.rollback()
+        db.delete(user)  # re-mark for deletion
+
+        try:
+            db.commit()  # try again
+        except Exception as e2:
+            logger.critical(
+                f"Failed to delete User {uid} from DB after Firebase deletion: {str(e2)}"
+            )
+            return {"message": "Account deletion partially successful"}
+
     logger.info(f"User {uid} successfully deleted their account")
 
     return {"message": "Account deleted successfully"}
