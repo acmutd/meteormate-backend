@@ -2,6 +2,7 @@
 # ACM MeteorMate | All Rights Reserved
 
 import logging
+from urllib.parse import unquote, urlparse
 import uuid
 
 from fastapi import APIRouter, Depends
@@ -125,7 +126,10 @@ async def delete_profile_pic(
         logger.warning(f"invalid picture index {index} for User {uid}")
         raise BadRequest("Index out-of-bounds for profile pictures")  # kinda funny ngl
 
-    file_name = profile.profile_picture_url[index].split("/")[-1]
+    # this basically parses the url to recognize any params with '?' and any url encodings
+    parsed_url = urlparse(profile.profile_picture_url[index])
+    url_path = unquote(parsed_url.path)  # get only the path
+    file_name = url_path.split("/")[-1]
 
     # firebase storage helper don't confuse with endpoint function (also don't catch exceptions from this)
     delete_profile_picture(f"profile_pictures/{uid}/{file_name}")
