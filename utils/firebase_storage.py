@@ -87,7 +87,7 @@ def delete_profile_picture(blob_path: str):
         raise Forbidden("Access to storage bucket denied")
 
 
-def delete_all_profile_pictures(user_id: str):
+def delete_all_profile_pictures(uid: str):
     """
     Function to delete all profile pictures of a user from firebase storage
     Args:
@@ -96,7 +96,7 @@ def delete_all_profile_pictures(user_id: str):
     """
     try:
         bucket = storage.bucket()
-        blobs = bucket.list_blobs(prefix=f"profile-pictures/{user_id}/")
+        blobs = bucket.list_blobs(prefix=f"profile_pictures/{uid}/")
 
         for blob in blobs:
             blob.delete()
