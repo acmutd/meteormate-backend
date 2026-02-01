@@ -19,7 +19,6 @@ def create_app() -> FastAPI:
     app = FastAPI(
         title="MeteorMate API",
         version="1.0.0",
-        root_path="/api",
     )
 
     # Logging
