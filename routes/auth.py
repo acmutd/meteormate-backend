@@ -101,7 +101,9 @@ async def delete_user_account(
     try:
         commit_or_raise(db, logger, resource="user", uid=uid, action="delete")
     except Exception as e:
-        logger.critical(f"Failed to delete User {uid} from DB after Firebase deletion: {str(e)}")
+        logger.critical(
+            f"Failed to delete User {uid} from DB after Firebase deletion (delete during cron): {str(e)}"
+        )
 
     logger.info(f"User {uid} successfully deleted their account")
 
