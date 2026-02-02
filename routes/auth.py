@@ -16,6 +16,7 @@ from models.user import User, UserRequestVerify, UserCompleteVerify, UserResetPa
 from utils.firebase_auth import get_current_user, get_firebase_and_uid
 from utils.email import send_verification_email
 from schemas.user import UserCreate, UserResponse
+from utils.firebase_storage import delete_all_profile_pictures
 from utils.verification_codes import create_verification_code, verify_code
 
 logger = logging.getLogger("meteormate." + __name__)
@@ -75,7 +76,7 @@ async def get_current_user_profile(
     return user
 
 
-@router.post("/delete")
+@router.delete("/delete")
 async def delete_user_account(
     current_user_token=Depends(get_current_user), db: Session = Depends(get_db)
 ):
@@ -92,22 +93,15 @@ async def delete_user_account(
         logger.error(f"Error deleting User {uid} account: {str(e)}")
         raise InternalServerError("Error deleting account")
 
+    # important part idk how i forgot it first time
+    delete_all_profile_pictures(uid)
+
     db.delete(user)
-    # commit_or_raise(db, logger, resource="user", uid=uid, action="delete")
 
     try:
-        db.commit()
+        commit_or_raise(db, logger, resource="user", uid=uid, action="delete")
     except Exception as e:
-        db.rollback()
-        db.delete(user)  # re-mark for deletion
-
-        try:
-            db.commit()  # try again
-        except Exception as e2:
-            logger.critical(
-                f"Failed to delete User {uid} from DB after Firebase deletion: {str(e2)}"
-            )
-            return {"message": "Account deletion partially successful"}
+        logger.critical(f"Failed to delete User {uid} from DB after Firebase deletion: {str(e)}")
 
     logger.info(f"User {uid} successfully deleted their account")
 
