@@ -87,6 +87,10 @@ async def delete_user_account(
         logger.warning(f"User {uid} not found in DB during account deletion")
         raise NotFound("User")
 
+    # change pending_deletion to true
+    user.pending_deletion = True
+    commit_or_raise(db, logger, resource="user", uid=uid, action="mark pending deletion")
+
     try:
         auth.delete_user(uid)
     except FirebaseError as e:
