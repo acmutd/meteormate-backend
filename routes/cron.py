@@ -4,6 +4,8 @@
 from datetime import datetime, timedelta
 import logging
 
+from firebase_admin import auth
+from firebase_admin.exceptions import FirebaseError
 from fastapi import APIRouter, Depends, HTTPException, Header
 from sqlalchemy import text, and_
 from sqlalchemy.exc import SQLAlchemyError
@@ -13,6 +15,7 @@ from database import get_db
 from config import Settings
 from models.user import User, InactivityStage
 from utils.email import send_inactive_notices
+from utils.exceptions import InternalServerError, Unauthorized
 
 logger = logging.getLogger("meteormate." + __name__)
 
@@ -185,3 +188,26 @@ async def check_inactive_users(x_cron_secret: str = Header(None), db: Session = 
 
     logger.info(f"Inactive user check complete. Results: {results}")
     return results
+
+
+@router.post("/delete_pending_users")
+async def delete_pending_users(x_cron_secret: str = Header(None), db: Session = Depends(get_db)):
+    if x_cron_secret != Settings.CRON_SECRET or not Settings.CRON_SECRET:
+        logger.warning("Unauthorized attempt to access /delete_pending_users")
+        raise Unauthorized("Unauthorized request")
+
+    logger.info("Starting scheduled DB cleanup task for pending delete users")
+
+    try:
+        with db.begin():
+            # delete user where pending_deletion is true
+            deleted_users = db.query(User).where(User.pending_deletion.is_(True)
+                                                 ).delete(synchronize_session=False)
+
+            logger.info(f"Deleted {deleted_users} delete pending users from DB")
+
+        logger.info("Delete pending user cleanup task completed successfully")
+        return {"deleted_users": deleted_users}
+    except SQLAlchemyError as e:
+        logger.error(f"Database error during delete pending user cleanup task: {str(e)}")
+        raise InternalServerError("Database error during cleanup")
