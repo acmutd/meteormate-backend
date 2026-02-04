@@ -1,5 +1,5 @@
 # Created by Ryan Polasky | 7/12/25
-# Heavily modified by Atharva Mishra
+# Updated by Atharva Mishra
 # ACM MeteorMate | All Rights Reserved
 
 import logging
@@ -19,7 +19,7 @@ def create_app() -> FastAPI:
     app = FastAPI(
         title="MeteorMate API",
         version="1.0.0",
-        root_path="/api",
+        root_path="/api"
     )
 
     # Logging
