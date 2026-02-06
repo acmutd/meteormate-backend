@@ -170,7 +170,7 @@ class Survey(Base):
         mm_enum(HaveLeaseLengthEnum, "have_lease_length_enum"), nullable=True
     )
 
-    
+    survey_answers = Column(ARRAY(Integer))
 
     # Catch-all
     answers = Column(
@@ -186,5 +186,8 @@ class Survey(Base):
         server_default=func.now(),
         onupdate=func.now(),
     )
+
+    smoke_vape = Column(Boolean, nullable=False, server_default=text("false"))
+    drink = Column(Boolean, nullable=False, server_default=text("false"))
 
     user = relationship("User", back_populates="survey", uselist=False)

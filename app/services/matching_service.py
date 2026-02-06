@@ -3,13 +3,85 @@
 
 import logging
 from typing import List, Dict
-
+import numpy as np
+from joblib import Parallel, delayed
 from sqlalchemy.orm import Session
 from app.models.user import User
-from app.models.survey import Survey
+from app.models.user_profile import UserProfile, GENDER_ENUM
+from app.models.survey import Survey, DealbreakerEnum
 from app.models.matches import Match
 
 logger = logging.getLogger("meteormate." + __name__)
+
+class ParallelizedMatchingService:
+
+    def __init__(self, db: Session, sim_matrix: np.array, question_weights: np.array, idx_to_attr: dict):
+        self.db = db
+        self.sim_matrix = sim_matrix
+        self.q_weights = question_weights
+        self.q_idx = np.arange(12)
+        self.idx_to_attr = idx_to_attr # each index (column) in each user vector maps to specific question/attribute in the Survey schema
+
+    async def find_potential_matches(self, user_id: str, limit: int = 10) -> List[Dict]:
+        logger.info(f"Finding potential matches for User {user_id}")
+
+        # get user's survey
+        user_survey = self.db.query(Survey).filter(Survey.user_id == user_id).first()
+        if not user_survey:
+            logger.warning(f"User {user_id} has no survey, returning 0 matches")
+            return []
+
+        # get IDs of users already passed/matched
+        interacted_user_ids = (
+            self.db.query(Match.target_user_id).filter(Match.user_id == user_id).all()
+        )
+        # extract IDs
+        seen_ids = {uid for (uid, ) in interacted_user_ids}
+        seen_ids.add(user_id)  # exclude the user themselves obviously
+
+        # get other users' surveys (excluding already matched/passed)
+        other_surveys = (
+            self.db.query(Survey).filter(Survey.user_id.notin_(seen_ids)).limit(limit * 2)
+        )
+
+        # find all other users that should be filtered out
+        forbidden_user_ids = []
+
+        # different gender
+        user_profile = self.db.query(UserProfile).filter(UserProfile.user_id == user_id).first()
+        if user_survey.dealbreakers.contains([DealbreakerEnum.SAME_GENDER]):
+            diff_gender = self.db.query(UserProfile).filter(UserProfile.gender != user_profile.gender)
+            forbidden_user_ids += [user_profile.user_id for user_profile in diff_gender]
+        
+        # smoking or vaping
+        if user_survey.dealbreakers.contains([DealbreakerEnum.SMOKE_VAPE]):
+            smoke_vape = self.db.query(Survey).filter(Survey.smoke_vape == True)
+            forbidden_user_ids += [survey.user_id for survey in smoke_vape]
+        
+        # age gap > 15 years (may change later)
+        age_gap = self.db.query(UserProfile).filter(abs(UserProfile.age - user_profile.age) > 15)
+        forbidden_user_ids += [user_profile.user_id for user_profile in age_gap]
+
+        # inactive users
+        inactive = self.db.query(User).filter(User.is_active == False)
+        forbidden_user_ids += [user.id for user in inactive]
+
+        # filter all the people violating dealbreakers
+        other_surveys = other_surveys.filter(Survey.user_id not in set(forbidden_user_ids))
+        
+        # parallelize compatibility calculations for all other users 
+        user = np.array(list(user_survey.survey_answers))
+        others = np.array([list(other_survey.survey_answers) for other_survey in other_surveys])
+        user_vector, other_vectors = user[:, 1:], others[:, 1:]
+        sim_scores = self.sim_matrix[self.q_idx, user_vector, other_vectors]
+        average_sim_scores = np.sum(self.q_weights * sim_scores / np.sum(self.q_weights, axis=-1), axis=1)
+        others = others[np.argsort(average_sim_scores)[::-1]]
+
+        # parallelize the process of mapping question indices to attribute names in the Survey schema
+        def process_row(row):
+            return [(self.idx_to_attr[col_idx], value) for col_idx, value in enumerate(row)]
+        res = Parallel(n_jobs=-1)(delayed(process_row)(row) for row in others)
+        return dict(res)
 
 
 class MatchingService:
