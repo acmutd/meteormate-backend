@@ -70,6 +70,7 @@ class UserProfileCreate(UserProfileBase):
     gender: Gender
     major: str
     classification: Classification
+    profile_picture_url: list[str]
     bio: str
     first_name: str
     last_name: str
