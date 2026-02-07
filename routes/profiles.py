@@ -95,6 +95,9 @@ async def upload_profile_pic(
         logger.warning(f"profile not found for User {uid}")
         raise NotFound("User profile")
 
+    if profile.profile_picture_url is None:
+        profile.profile_picture_url = []
+
     img_id = str(uuid.uuid4())
     blob_path = f"profile_pictures/{uid}/{img_id}.webp"
 
