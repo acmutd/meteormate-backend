@@ -37,7 +37,7 @@ class UserProfile(ORMBase):
     major = Column(Text)
     classification = Column(CLASSIFICATION_ENUM)
     bio = Column(Text)
-    profile_picture_url = Column(MutableList.as_mutable(ARRAY(Text)))
+    profile_picture_url = Column(MutableList.as_mutable(ARRAY(Text)), default=[])
 
     # moved from user table
     first_name = Column(Text)
