@@ -4,15 +4,13 @@
 from datetime import datetime, timedelta
 import logging
 
-from firebase_admin import auth
-from firebase_admin.exceptions import FirebaseError
 from fastapi import APIRouter, Depends, HTTPException, Header
 from sqlalchemy import text, and_
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
 from database import get_db
-from config import Settings, settings
+from config import settings
 from models.user import User, InactivityStage
 from utils.email import send_inactive_notices
 from utils.exceptions import InternalServerError, Unauthorized
@@ -25,7 +23,7 @@ router = APIRouter()
 # noinspection SqlResolve,PyTypeChecker
 @router.post("/clean-db")
 def clean_db(x_cron_secret: str = Header(None), db: Session = Depends(get_db)):
-    if x_cron_secret != Settings.CRON_SECRET or not Settings.CRON_SECRET:
+    if x_cron_secret != settings.CRON_SECRET or not settings.CRON_SECRET:
         logger.warning("Unauthorized attempt to access /clean-db")
         raise HTTPException(status_code=401, detail="Unauthorized request")
 
@@ -101,7 +99,7 @@ async def check_inactive_users(x_cron_secret: str = Header(None), db: Session = 
     Check for users that should be inactive/are inactive & send appropriate notices via email.
     Runs in 3 steps so a failure in one doesn't stop the others.
     """
-    if x_cron_secret != Settings.CRON_SECRET or not Settings.CRON_SECRET:
+    if x_cron_secret != settings.CRON_SECRET or not settings.CRON_SECRET:
         logger.warning("Unauthorized attempt to access /check-inactive-users")
         raise HTTPException(status_code=401, detail="Unauthorized request")
 
@@ -201,7 +199,7 @@ async def check_inactive_users(x_cron_secret: str = Header(None), db: Session = 
 
 @router.post("/delete_pending_users")
 async def delete_pending_users(x_cron_secret: str = Header(None), db: Session = Depends(get_db)):
-    if x_cron_secret != Settings.CRON_SECRET or not Settings.CRON_SECRET:
+    if x_cron_secret != settings.CRON_SECRET or not settings.CRON_SECRET:
         logger.warning("Unauthorized attempt to access /delete_pending_users")
         raise Unauthorized("Unauthorized request")
 
