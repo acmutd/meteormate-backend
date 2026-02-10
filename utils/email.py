@@ -28,7 +28,11 @@ def send_verification_email(email: str, code: str):
     msg.attach(MIMEText(html, 'html'))
 
     # send email via SMTP
-    with smtplib.SMTP_SSL(settings.SMTP_SERVER, settings.SMTP_PORT) as server:
+    with smtplib.SMTP(settings.SMTP_SERVER, settings.SMTP_PORT) as server:
+        server.ehlo()
+        server.starttls()
+        server.ehlo()
+
         server.login(settings.EMAIL_USER, settings.EMAIL_PASSWORD)
         server.sendmail(settings.EMAIL_USER, email, msg.as_string())
 
