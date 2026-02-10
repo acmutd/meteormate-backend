@@ -55,7 +55,7 @@ async def register_user(user_data: UserCreate, db: Session = Depends(get_db)):
                 auth.delete_user(firebase_user.uid)
                 logger.info(f"rolled back Firebase user {firebase_user.uid} after DB failure")
             except Exception:
-                logger.exception("failed to rollback Firebase user", exc_info=settings.DEBUG)
+                logger.error("failed to rollback Firebase user", stack_info=settings.DEBUG)
 
         raise  # re-raise the original exception
 
@@ -94,7 +94,7 @@ async def delete_user_account(
     try:
         auth.delete_user(uid)
     except (ValueError, FirebaseError) as e:
-        logger.error(f"Error deleting User {uid} account: {str(e)}", exc_info=settings.DEBUG)
+        logger.error(f"Error deleting User {uid} account: {str(e)}", stack_info=settings.DEBUG)
 
         user.pending_deletion = False
         commit_or_raise(db, logger, resource="user", uid=uid, action="unmark for deletion")
@@ -111,7 +111,7 @@ async def delete_user_account(
     except Exception as e:
         logger.critical(
             f"Failed to delete User {uid} from DB after Firebase deletion (delete during cron): {str(e)}",
-            exc_info=settings.DEBUG,
+            stack_info=settings.DEBUG,
         )
 
     logger.info(f"User {uid} successfully deleted their account")
@@ -142,7 +142,8 @@ async def send_verification_code(request: UserRequestVerify, db: Session = Depen
     except Exception as e:
         db.rollback()
         logger.error(
-            f"There was an error sending an email to User {uid}: {str(e)}", exc_info=settings.DEBUG
+            f"There was an error sending an email to User {uid}: {str(e)}",
+            stack_info=settings.DEBUG
         )
 
         raise InternalServerError("Failed to send verification code")
@@ -171,7 +172,8 @@ async def reset_password(request: UserResetPassword, db: Session = Depends(get_d
         auth.update_user(uid, password=request.new_password)
     except Exception as e:
         logger.error(
-            f"There was an error updating User {uid}'s password: {str(e)}", exc_info=settings.DEBUG
+            f"There was an error updating User {uid}'s password: {str(e)}",
+            stack_info=settings.DEBUG
         )
         raise InternalServerError("Error updating password")
 
@@ -192,7 +194,7 @@ async def verify_email(request: UserCompleteVerify, db: Session = Depends(get_db
         auth.update_user(uid, email_verified=True)
     except Exception as e:
         logger.error(
-            f"There was an error verifying User {uid}'s email: {str(e)}", exc_info=settings.DEBUG
+            f"There was an error verifying User {uid}'s email: {str(e)}", stack_info=settings.DEBUG
         )
         raise InternalServerError("Error updating user")
 
