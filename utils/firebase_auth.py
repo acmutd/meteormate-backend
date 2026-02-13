@@ -23,7 +23,9 @@ if not firebase_admin._apps:
         })
         logger.info("Firebase Admin SDK initialized successfully")
     except Exception as e:
-        logger.critical(f"Failed to initialize Firebase Admin SDK: {str(e)}")
+        logger.critical(
+            f"Failed to initialize Firebase Admin SDK: {str(e)}", exc_info=settings.DEBUG
+        )
         raise
 
 security = HTTPBearer()
@@ -57,7 +59,7 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(s
         raise Unauthorized("Invalid Firebase token")
 
     except Exception as e:
-        logger.error(f"Unexpected authentication error: {str(e)}")
+        logger.error(f"Unexpected authentication error: {str(e)}", exc_info=settings.DEBUG)
         raise Unauthorized("Authentication error")
 
 
@@ -71,7 +73,7 @@ async def get_firebase_user(uid: str):
         raise NotFound("Firebase user")
 
     except Exception as e:
-        logger.error(f"Error fetching Firebase user {uid}: {str(e)}")
+        logger.error(f"Error fetching Firebase user {uid}: {str(e)}", exc_info=settings.DEBUG)
         raise InternalServerError("Error fetching Firebase user")
 
 
@@ -89,5 +91,5 @@ async def get_firebase_and_uid(email: str = None, uid: str = None):
     except auth.UserNotFoundError:
         raise NotFound("User")
     except Exception as e:
-        logger.error(str(e))
+        logger.error(str(e), exc_info=settings.DEBUG)
         raise InternalServerError("Error fetching user")
