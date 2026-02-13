@@ -86,10 +86,10 @@ def clean_db(x_cron_secret: str = Header(None), db: Session = Depends(get_db)):
         }
 
     except SQLAlchemyError as e:
-        logger.error(f"Database error during cleanup task: {str(e)}", stack_info=settings.DEBUG)
+        logger.error(f"Database error during cleanup task: {str(e)}", exc_info=settings.DEBUG)
         raise HTTPException(status_code=500, detail="Database error during cleanup")
     except Exception as e:
-        logger.error(f"Unexpected error during cleanup task: {str(e)}", stack_info=settings.DEBUG)
+        logger.error(f"Unexpected error during cleanup task: {str(e)}", exc_info=settings.DEBUG)
         raise HTTPException(status_code=500, detail="Internal server error")
 
 
@@ -125,14 +125,14 @@ async def check_inactive_users(x_cron_secret: str = Header(None), db: Session = 
             except Exception as email_err:
                 logger.error(
                     f"Failed to send 1-month notice to User {user.id}: {email_err}",
-                    stack_info=settings.DEBUG
+                    exc_info=settings.DEBUG
                 )
                 continue
 
         db.commit()
     except SQLAlchemyError as e:
         db.rollback()
-        logger.error(f"DB Error processing 1-month warnings: {str(e)}", stack_info=settings.DEBUG)
+        logger.error(f"DB Error processing 1-month warnings: {str(e)}", exc_info=settings.DEBUG)
 
     # 1 week warning
     try:
@@ -154,14 +154,14 @@ async def check_inactive_users(x_cron_secret: str = Header(None), db: Session = 
             except Exception as email_err:
                 logger.error(
                     f"Failed to send 1-week notice to User {user.id}: {email_err}",
-                    stack_info=settings.DEBUG
+                    exc_info=settings.DEBUG
                 )
                 continue
 
         db.commit()
     except SQLAlchemyError as e:
         db.rollback()
-        logger.error(f"DB Error processing 1-week warnings: {str(e)}", stack_info=settings.DEBUG)
+        logger.error(f"DB Error processing 1-week warnings: {str(e)}", exc_info=settings.DEBUG)
 
     # Mark inactive
     try:
@@ -184,14 +184,14 @@ async def check_inactive_users(x_cron_secret: str = Header(None), db: Session = 
             except Exception as email_err:
                 logger.error(
                     f"Failed to send inactive notice to User {user.id}: {email_err}",
-                    stack_info=settings.DEBUG
+                    exc_info=settings.DEBUG
                 )
                 continue
 
         db.commit()
     except SQLAlchemyError as e:
         db.rollback()
-        logger.error(f"DB Error processing final inactivity: {str(e)}", stack_info=settings.DEBUG)
+        logger.error(f"DB Error processing final inactivity: {str(e)}", exc_info=settings.DEBUG)
 
     logger.info(f"Inactive user check complete. Results: {results}")
     return results
@@ -218,6 +218,6 @@ async def delete_pending_users(x_cron_secret: str = Header(None), db: Session = 
     except SQLAlchemyError as e:
         logger.error(
             f"Database error during delete pending user cleanup task: {str(e)}",
-            stack_info=settings.DEBUG
+            exc_info=settings.DEBUG
         )
         raise InternalServerError("Database error during cleanup")

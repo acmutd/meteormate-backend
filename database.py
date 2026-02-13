@@ -31,7 +31,7 @@ try:
     SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 except Exception as e:
-    logger.critical(f"Failed to initialize database engine: {str(e)}", stack_info=settings.DEBUG)
+    logger.critical(f"Failed to initialize database engine: {str(e)}", exc_info=settings.DEBUG)
     raise
 
 ORMBase = declarative_base()
@@ -75,13 +75,13 @@ def commit_or_raise(
         if isinstance(orig, ForeignKeyViolation):
             route_logger.error(
                 f"{action} failed: foreign key violation on {resource} (User: {uid})",
-                stack_info=settings.DEBUG,
+                exc_info=settings.DEBUG,
             )
             raise NotFound(resource)
 
         route_logger.error(
             f"{action} failed: integrity conflict on {resource} (User: {uid})",
-            stack_info=settings.DEBUG
+            exc_info=settings.DEBUG
         )
         raise Conflict(f"{resource} conflicts with existing data")
 
@@ -89,6 +89,6 @@ def commit_or_raise(
         db.rollback()
         route_logger.error(
             f"{action} failed: unexpected DB error on {resource} (User: {uid})",
-            stack_info=settings.DEBUG
+            exc_info=settings.DEBUG
         )
         raise InternalServerError(f"Internal server error while {action} {resource}")
