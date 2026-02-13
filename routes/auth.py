@@ -13,7 +13,7 @@ from firebase_admin.exceptions import FirebaseError
 from database import commit_or_raise, get_db
 from config import settings
 from utils.exceptions import BadRequest, Conflict, InternalServerError, NotFound
-from models.user import User, UserRequestVerify, UserCompleteVerify, UserResetPassword
+from models.user import InactivityStage, User, UserRequestVerify, UserCompleteVerify, UserResetPassword
 from utils.firebase_auth import get_current_user, get_firebase_and_uid
 from utils.email import send_verification_email
 from schemas.user import UserCreate, UserResponse
@@ -216,5 +216,22 @@ def activity_ping(current_user_token=Depends(get_current_user), db: Session = De
     current_user.inactivity_notification_stage = None
 
     commit_or_raise(db, logger, resource="user", uid=current_user.id, action="update")
+
+    return {"status": "ok"}
+
+
+@router.get("/mark-inactive")
+def mark_inactive(current_user_token=Depends(get_current_user), db: Session = Depends(get_db)):
+    uid = current_user_token.get("uid")
+
+    current_user = db.query(User).filter(User.id == uid).first()
+    if not current_user:
+        logger.warning(f"User {uid} not found in DB during inactivity mark")
+        raise NotFound("User")
+
+    current_user.inactivity_notification_stage = InactivityStage.INACTIVE
+    current_user.updated_at = datetime.now(timezone.utc)
+
+    commit_or_raise(db, logger, resource="user", uid=current_user.id, action="mark inactive")
 
     return {"status": "ok"}
