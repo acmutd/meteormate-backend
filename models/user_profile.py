@@ -1,7 +1,8 @@
 # Created by Ryan Polasky | 9/20/25
 # ACM MeteorMate | All Rights Reserved
 
-from sqlalchemy import ARRAY, Column, DateTime, Text, ForeignKey, func, Numeric
+import enum
+from sqlalchemy import ARRAY, Column, DateTime, Text, ForeignKey, func, Numeric, Enum as SQLEnum
 from sqlalchemy.dialects.postgresql import ENUM as PGEnum
 from sqlalchemy.orm import relationship
 from sqlalchemy.ext.mutable import MutableList
@@ -28,6 +29,12 @@ CLASSIFICATION_ENUM = PGEnum(
 )
 
 
+class EmailPreferenceEnum(enum.Enum):
+    MATCHES = 'matches'
+    PROMOTIONS = 'promotions'
+    BOTH = 'both'
+
+
 class UserProfile(ORMBase):
     __tablename__ = "user_profiles"
 
@@ -43,6 +50,17 @@ class UserProfile(ORMBase):
     first_name = Column(Text)
     last_name = Column(Text)
     age = Column(Numeric)
+
+    email_preference = Column(
+        SQLEnum(
+            EmailPreferenceEnum,
+            name="email_preference_enum",
+            validate_strings=True,
+            values_callable=lambda enum: [e.value for e in enum]
+        ),
+        default=None,
+        nullable=True
+    )
 
     # behind-the-scenes stuff
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
