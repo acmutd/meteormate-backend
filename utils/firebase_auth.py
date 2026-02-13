@@ -6,10 +6,13 @@ import logging
 
 import firebase_admin
 from firebase_admin import credentials, auth
+from sqlalchemy.orm import Session
 from fastapi import Depends
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 
 from config import settings
+from database import get_db
+from models.user import User
 from utils.exceptions import Forbidden, InternalServerError, NotFound, Unauthorized
 
 logger = logging.getLogger("meteormate." + __name__)
@@ -31,11 +34,15 @@ if not firebase_admin._apps:
 security = HTTPBearer()
 
 
-async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)):
+async def get_current_user(
+    credentials: HTTPAuthorizationCredentials = Depends(security), db: Session = Depends(get_db)
+) -> User:
     if credentials.credentials == settings.ADMIN_BEARER:
         if not settings.DEBUG:
             raise Forbidden("Admin bypass only in DEBUG mode")
-        return {"id": settings.ADMIN_UID, "uid": settings.ADMIN_UID}
+
+        user = db.query(User).filter(User.id == settings.ADMIN_UID).first()
+        return {"id": settings.ADMIN_UID, "uid": settings.ADMIN_UID}, user
 
     try:
         # verify the firebase token
@@ -44,7 +51,12 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(s
         # SAFETY NET - Map 'uid' to 'id' for dumb devs (myself & me)
         decoded_token["id"] = decoded_token["uid"]  # this is never used btw
 
-        return decoded_token
+        user = db.query(User).filter(User.id == decoded_token["uid"]).first()
+        if not user:
+            logger.warning(f"Auth failed: Firebase user {decoded_token['uid']} not found in DB")
+            raise NotFound("User")
+
+        return user
 
     except auth.ExpiredIdTokenError:
         logger.warning("Auth failed: Token Expired")
