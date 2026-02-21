@@ -3,6 +3,7 @@
 # ACM MeteorMate | All Rights Reserved
 
 import logging
+from typing import Annotated
 
 import firebase_admin
 from firebase_admin import credentials, auth
@@ -13,7 +14,7 @@ from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from config import settings
 from database import get_db
 from models.user import User
-from utils.exceptions import Forbidden, InternalServerError, NotFound, Unauthorized
+from utils.exceptions import InternalServerError, NotFound, Unauthorized
 
 logger = logging.getLogger("meteormate." + __name__)
 
@@ -34,8 +35,10 @@ if not firebase_admin._apps:
 security = HTTPBearer()
 
 
+# more reason to hate YAPF
 async def get_current_user(
-    credentials: HTTPAuthorizationCredentials = Depends(security), db: Session = Depends(get_db)
+    credentials: Annotated[HTTPAuthorizationCredentials,
+                           Depends(security)], db: Annotated[Session, Depends(get_db)]
 ) -> User:
     try:
         # verify the firebase token
