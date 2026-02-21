@@ -220,7 +220,7 @@ def activity_ping(current_user_token=Depends(get_current_user), db: Session = De
     return {"status": "ok"}
 
 
-@router.get("/mark-inactive")
+@router.post("/mark-inactive")
 def mark_inactive(current_user_token=Depends(get_current_user), db: Session = Depends(get_db)):
     uid = current_user_token.get("uid")
 
@@ -230,7 +230,6 @@ def mark_inactive(current_user_token=Depends(get_current_user), db: Session = De
         raise NotFound("User")
 
     current_user.inactivity_notification_stage = InactivityStage.INACTIVE
-    current_user.updated_at = datetime.now(timezone.utc)
 
     commit_or_raise(db, logger, resource="user", uid=current_user.id, action="mark inactive")
 
