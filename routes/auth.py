@@ -4,6 +4,7 @@
 
 import logging
 from datetime import datetime, timezone
+from typing import Annotated
 
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
@@ -26,7 +27,7 @@ router = APIRouter()
 
 
 @router.post("/register", response_model=UserResponse)
-async def register_user(user_data: UserCreate, db: Session = Depends(get_db)):
+async def register_user(user_data: UserCreate, db: Annotated[Session, Depends(get_db)]):
     if db.query(User).filter(User.utd_id == user_data.utd_id).first() \
         or db.query(User).filter(User.email == user_data.email).first():
 
@@ -61,17 +62,17 @@ async def register_user(user_data: UserCreate, db: Session = Depends(get_db)):
 
 
 @router.get("/me", response_model=UserResponse)
-async def get_current_user_profile(
-    current_user: User = Depends(get_current_user), db: Session = Depends(get_db)
-):
+async def get_current_user_profile(current_user: Annotated[User, Depends(get_current_user)]):
     logger.info(f"User {current_user.id} requested /me")
 
     return current_user
 
 
+# more reason to hate YAPF
 @router.delete("/delete")
 async def delete_user_account(
-    current_user: User = Depends(get_current_user), db: Session = Depends(get_db)
+    current_user: Annotated[User, Depends(get_current_user)], db: Annotated[Session,
+                                                                            Depends(get_db)]
 ):
     current_user.pending_deletion = True
     commit_or_raise(db, logger, resource="user", uid=current_user.id, action="mark for deletion")
@@ -109,7 +110,9 @@ async def delete_user_account(
 
 
 @router.post("/send-verification-code")
-async def send_verification_code(request: UserRequestVerify, db: Session = Depends(get_db)):
+async def send_verification_code(
+    request: UserRequestVerify, db: Annotated[Session, Depends(get_db)]
+):
     firebase_user, uid = await get_firebase_and_uid(email=request.email, uid=request.uid)
 
     purpose = request.purpose
@@ -139,7 +142,7 @@ async def send_verification_code(request: UserRequestVerify, db: Session = Depen
 
 # this is called immediately upon user trying to reset password but NO "new password" is asked for/received
 @router.post("/verify-reset-code")
-async def verify_reset_code(request: UserCompleteVerify, db: Session = Depends(get_db)):
+async def verify_reset_code(request: UserCompleteVerify, db: Annotated[Session, Depends(get_db)]):
     _, uid = await get_firebase_and_uid(email=request.email)
 
     verify_code(db, logger, uid, request.code, purpose="reset")  # verify w/o deleting from DB
@@ -151,7 +154,7 @@ async def verify_reset_code(request: UserCompleteVerify, db: Session = Depends(g
 
 # second portion of reset password flow, user has already verified code & is now sending us the new pwd to use
 @router.post("/reset-password")
-async def reset_password(request: UserResetPassword, db: Session = Depends(get_db)):
+async def reset_password(request: UserResetPassword, db: Annotated[Session, Depends(get_db)]):
     _, uid = await get_firebase_and_uid(email=request.email)
     # code gets verified a second time, consuming it this time
     verify_code(db, logger, uid, request.code, purpose="reset")  # don't delete the code after use
@@ -173,7 +176,7 @@ async def reset_password(request: UserResetPassword, db: Session = Depends(get_d
 
 
 @router.post("/verify-email")
-async def verify_email(request: UserCompleteVerify, db: Session = Depends(get_db)):
+async def verify_email(request: UserCompleteVerify, db: Annotated[Session, Depends(get_db)]):
     _, uid = await get_firebase_and_uid(email=request.email)
     verify_code(db, logger, uid, request.code, purpose="verify")  # verify w/o deletion'
 
@@ -193,7 +196,10 @@ async def verify_email(request: UserCompleteVerify, db: Session = Depends(get_db
 
 
 @router.get("/activity-ping")
-def activity_ping(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+def activity_ping(
+    current_user: Annotated[User, Depends(get_current_user)], db: Annotated[Session,
+                                                                            Depends(get_db)]
+):
     current_user.updated_at = datetime.now(timezone.utc)
     current_user.inactivity_notification_stage = None
 

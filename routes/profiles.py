@@ -2,6 +2,7 @@
 # ACM MeteorMate | All Rights Reserved
 
 import logging
+from typing import Annotated
 from urllib.parse import unquote, urlparse
 import uuid
 
@@ -30,8 +31,8 @@ router = APIRouter()
 @router.post("/create", response_model=UserProfileResponse)
 async def create_user_profile(
     profile_data: UserProfileCreate,
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[Session, Depends(get_db)],
 ):
     if current_user.profile:
         logger.warning(f"profile already exists for User {current_user.id}")
@@ -49,8 +50,8 @@ async def create_user_profile(
 @router.put("/update", response_model=UserProfileResponse)
 async def update_user_profile(
     profile_data: UserProfileUpdate,
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[Session, Depends(get_db)],
 ):
     profile = current_user.profile
 
@@ -69,7 +70,7 @@ async def update_user_profile(
 
 
 @router.get("/get/{uid}", response_model=UserProfileResponse)
-async def get_user_profile(uid: str, db: Session = Depends(get_db)):
+async def get_user_profile(uid: str, db: Annotated[Session, Depends(get_db)]):
     profile = db.query(UserProfile).filter(UserProfile.user_id == uid).first()
 
     if not profile:
@@ -82,8 +83,8 @@ async def get_user_profile(uid: str, db: Session = Depends(get_db)):
 @router.post("/upload_picture", response_model=UserProfileResponse)
 async def upload_profile_pic(
     image_data: UserProfilePicture,
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[Session, Depends(get_db)],
 ):
     profile = current_user.profile
     uid = current_user.id
@@ -112,8 +113,8 @@ async def upload_profile_pic(
 @router.delete("/delete_picture/{index}", response_model=UserProfileResponse)
 async def delete_profile_pic(
     index: int,
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[Session, Depends(get_db)],
 ):
     uid = current_user.id
     profile = current_user.profile

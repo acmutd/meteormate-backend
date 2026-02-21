@@ -23,7 +23,7 @@ router = APIRouter()
 async def create_survey(
     survey_data: SurveyCreate,
     current_user: Annotated[User, Depends(get_current_user)],
-    db: Session = Depends(get_db),
+    db: Annotated[Session, Depends(get_db)],
 ):
     uid = current_user.id
 
@@ -42,10 +42,7 @@ async def create_survey(
 
 
 @router.get("/me", response_model=SurveyResponse)
-async def get_my_survey(
-    current_user: Annotated[User, Depends(get_current_user)],
-    db: Session = Depends(get_db),
-):
+async def get_my_survey(current_user: Annotated[User, Depends(get_current_user)]):
     uid = current_user.id
 
     if not current_user.survey:
@@ -60,7 +57,7 @@ async def get_my_survey(
 async def update_survey(
     survey_data: SurveyUpdate,
     current_user: Annotated[User, Depends(get_current_user)],
-    db: Session = Depends(get_db),
+    db: Annotated[Session, Depends(get_db)],
 ):
     uid = current_user.id
     survey = current_user.survey
