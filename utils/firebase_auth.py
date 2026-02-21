@@ -37,13 +37,6 @@ security = HTTPBearer()
 async def get_current_user(
     credentials: HTTPAuthorizationCredentials = Depends(security), db: Session = Depends(get_db)
 ) -> User:
-    if credentials.credentials == settings.ADMIN_BEARER:
-        if not settings.DEBUG:
-            raise Forbidden("Admin bypass only in DEBUG mode")
-
-        user = db.query(User).filter(User.id == settings.ADMIN_UID).first()
-        return {"id": settings.ADMIN_UID, "uid": settings.ADMIN_UID}, user
-
     try:
         # verify the firebase token
         decoded_token = auth.verify_id_token(credentials.credentials)
@@ -54,7 +47,7 @@ async def get_current_user(
         user = db.query(User).filter(User.id == decoded_token["uid"]).first()
         if not user:
             logger.warning(f"Auth failed: Firebase user {decoded_token['uid']} not found in DB")
-            raise NotFound("User")
+            raise Unauthorized("Invalid credentials")
 
         return user
 
