@@ -8,6 +8,7 @@ import uuid
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
+from models.user import User
 from utils.exceptions import BadRequest, Conflict, NotFound
 from utils.firebase_storage import upload_profile_picture, delete_profile_picture
 
@@ -29,19 +30,17 @@ router = APIRouter()
 @router.post("/create", response_model=UserProfileResponse)
 async def create_user_profile(
     profile_data: UserProfileCreate,
-    current_user_token=Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    uid = current_user_token.get("uid")
-
-    if db.get(UserProfile, uid):
-        logger.warning(f"profile already exists for User {uid}")
+    if current_user.profile:
+        logger.warning(f"profile already exists for User {current_user.id}")
         raise Conflict("User profile already exists")
 
-    profile = UserProfile(user_id=uid, **profile_data.model_dump())
+    profile = UserProfile(user_id=current_user.id, **profile_data.model_dump())
     db.add(profile)
 
-    commit_or_raise(db, logger, resource="user profile", uid=uid, action="create")
+    commit_or_raise(db, logger, resource="user profile", uid=current_user.id, action="create")
 
     db.refresh(profile)
     return profile
@@ -50,22 +49,20 @@ async def create_user_profile(
 @router.put("/update", response_model=UserProfileResponse)
 async def update_user_profile(
     profile_data: UserProfileUpdate,
-    current_user_token=Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    uid = current_user_token.get("uid")
-
-    profile = db.query(UserProfile).filter(UserProfile.user_id == uid).first()
+    profile = current_user.profile
 
     if not profile:
-        logger.warning(f"profile not found for User {uid}")
+        logger.warning(f"profile not found for User {current_user.id}")
         raise NotFound("User profile")
 
     update_data = profile_data.model_dump(exclude_unset=True)
     for field, value in update_data.items():
         setattr(profile, field, value)
 
-    commit_or_raise(db, logger, resource="user profile", uid=uid, action="update")
+    commit_or_raise(db, logger, resource="user profile", uid=current_user.id, action="update")
 
     db.refresh(profile)
     return profile
@@ -85,12 +82,12 @@ async def get_user_profile(uid: str, db: Session = Depends(get_db)):
 @router.post("/upload_picture", response_model=UserProfileResponse)
 async def upload_profile_pic(
     image_data: UserProfilePicture,
-    current_user_token=Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    uid = current_user_token.get("uid")
+    profile = current_user.profile
+    uid = current_user.id
 
-    profile = db.query(UserProfile).filter(UserProfile.user_id == uid).first()
     if not profile:
         logger.warning(f"profile not found for User {uid}")
         raise NotFound("User profile")
@@ -115,12 +112,12 @@ async def upload_profile_pic(
 @router.delete("/delete_picture/{index}", response_model=UserProfileResponse)
 async def delete_profile_pic(
     index: int,
-    current_user_token=Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    uid = current_user_token.get("uid")
+    uid = current_user.id
+    profile = current_user.profile
 
-    profile = db.query(UserProfile).filter(UserProfile.user_id == uid).first()
     if not profile:
         logger.warning(f"profile not found for User {uid}")
         raise NotFound("User profile")
