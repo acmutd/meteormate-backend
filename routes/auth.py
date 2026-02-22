@@ -14,7 +14,13 @@ from firebase_admin.exceptions import FirebaseError
 from database import commit_or_raise, get_db
 from config import settings
 from utils.exceptions import BadRequest, Conflict, InternalServerError, NotFound
-from models.user import InactivityStage, User, UserRequestVerify, UserCompleteVerify, UserResetPassword
+from models.user import (
+    InactivityStage,
+    User,
+    UserRequestVerify,
+    UserCompleteVerify,
+    UserResetPassword,
+)
 from utils.firebase_auth import get_current_user, get_firebase_and_uid
 from utils.email import send_verification_email
 from schemas.user import UserCreate, UserResponse
@@ -28,8 +34,10 @@ router = APIRouter()
 
 @router.post("/register", response_model=UserResponse)
 async def register_user(user_data: UserCreate, db: Annotated[Session, Depends(get_db)]):
-    if db.query(User).filter(User.utd_id == user_data.utd_id).first() \
-        or db.query(User).filter(User.email == user_data.email).first():
+    if (
+        db.query(User).filter(User.utd_id == user_data.utd_id).first()
+        or db.query(User).filter(User.email == user_data.email).first()
+    ):
 
         logger.warning("user tried to create an account with an existing email/Net ID in DB")
         raise Conflict("Account already exists")
@@ -71,8 +79,8 @@ async def get_current_user_profile(current_user: Annotated[User, Depends(get_cur
 # more reason to hate YAPF
 @router.delete("/delete")
 async def delete_user_account(
-    current_user: Annotated[User, Depends(get_current_user)], db: Annotated[Session,
-                                                                            Depends(get_db)]
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[Session, Depends(get_db)],
 ):
     current_user.pending_deletion = True
     commit_or_raise(db, logger, resource="user", uid=current_user.id, action="mark for deletion")
@@ -81,12 +89,17 @@ async def delete_user_account(
         auth.delete_user(current_user.id)
     except (ValueError, FirebaseError) as e:
         logger.error(
-            f"Error deleting User {current_user.id} account: {str(e)}", exc_info=settings.DEBUG
+            f"Error deleting User {current_user.id} account: {str(e)}",
+            exc_info=settings.DEBUG,
         )
 
         current_user.pending_deletion = False
         commit_or_raise(
-            db, logger, resource="user", uid=current_user.id, action="unmark for deletion"
+            db,
+            logger,
+            resource="user",
+            uid=current_user.id,
+            action="unmark for deletion",
         )
 
         raise InternalServerError("Error deleting account")
@@ -134,7 +147,8 @@ async def send_verification_code(
     except Exception as e:
         db.rollback()
         logger.error(
-            f"There was an error sending an email to User {uid}: {str(e)}", exc_info=settings.DEBUG
+            f"There was an error sending an email to User {uid}: {str(e)}",
+            exc_info=settings.DEBUG,
         )
 
         raise InternalServerError("Failed to send verification code")
@@ -163,7 +177,8 @@ async def reset_password(request: UserResetPassword, db: Annotated[Session, Depe
         auth.update_user(uid, password=request.new_password)
     except Exception as e:
         logger.error(
-            f"There was an error updating User {uid}'s password: {str(e)}", exc_info=settings.DEBUG
+            f"There was an error updating User {uid}'s password: {str(e)}",
+            exc_info=settings.DEBUG,
         )
         raise InternalServerError("Error updating password")
 
@@ -184,7 +199,8 @@ async def verify_email(request: UserCompleteVerify, db: Annotated[Session, Depen
         auth.update_user(uid, email_verified=True)
     except Exception as e:
         logger.error(
-            f"There was an error verifying User {uid}'s email: {str(e)}", exc_info=settings.DEBUG
+            f"There was an error verifying User {uid}'s email: {str(e)}",
+            exc_info=settings.DEBUG,
         )
         raise InternalServerError("Error updating user")
 
@@ -197,8 +213,8 @@ async def verify_email(request: UserCompleteVerify, db: Annotated[Session, Depen
 
 @router.get("/activity-ping")
 def activity_ping(
-    current_user: Annotated[User, Depends(get_current_user)], db: Annotated[Session,
-                                                                            Depends(get_db)]
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[Session, Depends(get_db)],
 ):
     current_user.updated_at = datetime.now(timezone.utc)
     current_user.inactivity_notification_stage = None
@@ -209,14 +225,10 @@ def activity_ping(
 
 
 @router.post("/mark-inactive")
-def mark_inactive(current_user_token=Depends(get_current_user), db: Session = Depends(get_db)):
-    uid = current_user_token.get("uid")
-
-    current_user = db.query(User).filter(User.id == uid).first()
-    if not current_user:
-        logger.warning(f"User {uid} not found in DB during inactivity mark")
-        raise NotFound("User")
-
+def mark_inactive(
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[Session, Depends(get_db)],
+):
     current_user.inactivity_notification_stage = InactivityStage.INACTIVE
 
     commit_or_raise(db, logger, resource="user", uid=current_user.id, action="mark inactive")
