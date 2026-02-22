@@ -3,6 +3,7 @@
 # ACM MeteorMate | All Rights Reserved
 
 import logging
+from typing import Annotated
 
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
@@ -21,56 +22,46 @@ router = APIRouter()
 @router.post("/", response_model=SurveyResponse)
 async def create_survey(
     survey_data: SurveyCreate,
-    current_user_token=Depends(get_current_user),
-    db: Session = Depends(get_db),
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[Session, Depends(get_db)],
 ):
-    uid = current_user_token.get("uid")
+    uid = current_user.id
 
-    user = db.query(User).filter(User.id == uid).first()
-    if not user:
-        logger.warning(f"Survey creation failed: User {uid} not found in DB")
-        raise NotFound("User")
-
-    existing_survey = db.query(Survey).filter(Survey.user_id == uid).first()
-    if existing_survey:
+    if current_user.survey:
         logger.warning(f"User {uid} attempted to create a duplicate survey")
         raise BadRequest("Survey already exists")
 
-    new_survey = Survey(user_id=uid, **survey_data.model_dump())
-    db.add(new_survey)
+    survey = Survey(user_id=uid, **survey_data.model_dump())
+    db.add(survey)
 
     commit_or_raise(db, logger, resource="survey", uid=uid, action="create")
 
-    db.refresh(new_survey)
+    db.refresh(survey)
 
-    return new_survey
+    return survey
 
 
 @router.get("/me", response_model=SurveyResponse)
-async def get_my_survey(
-    current_user_token=Depends(get_current_user),
-    db: Session = Depends(get_db),
-):
-    uid = current_user_token.get("uid")
+async def get_my_survey(current_user: Annotated[User, Depends(get_current_user)]):
+    uid = current_user.id
 
-    survey = db.query(Survey).filter(Survey.user_id == uid).first()
-    if not survey:
+    if not current_user.survey:
         logger.warning(f"User {uid} requested survey but hasn't created one")
         raise NotFound("Survey")
 
     logger.info(f"User {uid} fetched their survey")
-    return survey
+    return current_user.survey
 
 
 @router.put("/", response_model=SurveyResponse)
 async def update_survey(
     survey_data: SurveyUpdate,
-    current_user_token=Depends(get_current_user),
-    db: Session = Depends(get_db),
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[Session, Depends(get_db)],
 ):
-    uid = current_user_token.get("uid")
+    uid = current_user.id
+    survey = current_user.survey
 
-    survey = db.query(Survey).filter(Survey.user_id == uid).first()
     if not survey:
         logger.warning(f"User {uid} attempted to update non-existent survey")
         raise NotFound("Survey")

@@ -4,6 +4,7 @@
 
 import logging
 from datetime import datetime, timezone
+from typing import Annotated
 
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
@@ -26,7 +27,7 @@ router = APIRouter()
 
 
 @router.post("/register", response_model=UserResponse)
-async def register_user(user_data: UserCreate, db: Session = Depends(get_db)):
+async def register_user(user_data: UserCreate, db: Annotated[Session, Depends(get_db)]):
     if db.query(User).filter(User.utd_id == user_data.utd_id).first() \
         or db.query(User).filter(User.email == user_data.email).first():
 
@@ -61,66 +62,57 @@ async def register_user(user_data: UserCreate, db: Session = Depends(get_db)):
 
 
 @router.get("/me", response_model=UserResponse)
-async def get_current_user_profile(
-    current_user_token=Depends(get_current_user), db: Session = Depends(get_db)
-):
-    uid = current_user_token.get("uid")
+async def get_current_user_profile(current_user: Annotated[User, Depends(get_current_user)]):
+    logger.info(f"User {current_user.id} requested /me")
 
-    user = db.query(User).filter(User.id == uid).first()
-
-    if not user:
-        logger.warning(f"User {uid} not found in DB during /me request")
-        raise NotFound("User")
-
-    logger.info(f"User {uid} requested /me")
-
-    return user
+    return current_user
 
 
+# more reason to hate YAPF
 @router.delete("/delete")
 async def delete_user_account(
-    current_user_token=Depends(get_current_user), db: Session = Depends(get_db)
+    current_user: Annotated[User, Depends(get_current_user)], db: Annotated[Session,
+                                                                            Depends(get_db)]
 ):
-    uid = current_user_token.get("uid")
-
-    user = db.query(User).filter(User.id == uid).first()
-    if not user:
-        logger.warning(f"User {uid} not found in DB during account deletion")
-        raise NotFound("User")
-
-    user.pending_deletion = True
-    commit_or_raise(db, logger, resource="user", uid=uid, action="mark for deletion")
+    current_user.pending_deletion = True
+    commit_or_raise(db, logger, resource="user", uid=current_user.id, action="mark for deletion")
 
     try:
-        auth.delete_user(uid)
+        auth.delete_user(current_user.id)
     except (ValueError, FirebaseError) as e:
-        logger.error(f"Error deleting User {uid} account: {str(e)}", exc_info=settings.DEBUG)
+        logger.error(
+            f"Error deleting User {current_user.id} account: {str(e)}", exc_info=settings.DEBUG
+        )
 
-        user.pending_deletion = False
-        commit_or_raise(db, logger, resource="user", uid=uid, action="unmark for deletion")
+        current_user.pending_deletion = False
+        commit_or_raise(
+            db, logger, resource="user", uid=current_user.id, action="unmark for deletion"
+        )
 
         raise InternalServerError("Error deleting account")
 
     # important part idk how i forgot it first time
-    delete_all_profile_pictures(uid)
+    delete_all_profile_pictures(current_user.id)
 
-    db.delete(user)
+    db.delete(current_user)
 
     try:
-        commit_or_raise(db, logger, resource="user", uid=uid, action="delete")
+        commit_or_raise(db, logger, resource="user", uid=current_user.id, action="delete")
     except Exception as e:
         logger.critical(
-            f"Failed to delete User {uid} from DB after Firebase deletion (delete during cron): {str(e)}",
+            f"Failed to delete User {current_user.id} from DB after Firebase deletion (delete during cron): {str(e)}",
             exc_info=settings.DEBUG,
         )
 
-    logger.info(f"User {uid} successfully deleted their account")
+    logger.info(f"User {current_user.id} successfully deleted their account")
 
     return {"message": "Account deleted successfully"}
 
 
 @router.post("/send-verification-code")
-async def send_verification_code(request: UserRequestVerify, db: Session = Depends(get_db)):
+async def send_verification_code(
+    request: UserRequestVerify, db: Annotated[Session, Depends(get_db)]
+):
     firebase_user, uid = await get_firebase_and_uid(email=request.email, uid=request.uid)
 
     purpose = request.purpose
@@ -150,7 +142,7 @@ async def send_verification_code(request: UserRequestVerify, db: Session = Depen
 
 # this is called immediately upon user trying to reset password but NO "new password" is asked for/received
 @router.post("/verify-reset-code")
-async def verify_reset_code(request: UserCompleteVerify, db: Session = Depends(get_db)):
+async def verify_reset_code(request: UserCompleteVerify, db: Annotated[Session, Depends(get_db)]):
     _, uid = await get_firebase_and_uid(email=request.email)
 
     verify_code(db, logger, uid, request.code, purpose="reset")  # verify w/o deleting from DB
@@ -162,7 +154,7 @@ async def verify_reset_code(request: UserCompleteVerify, db: Session = Depends(g
 
 # second portion of reset password flow, user has already verified code & is now sending us the new pwd to use
 @router.post("/reset-password")
-async def reset_password(request: UserResetPassword, db: Session = Depends(get_db)):
+async def reset_password(request: UserResetPassword, db: Annotated[Session, Depends(get_db)]):
     _, uid = await get_firebase_and_uid(email=request.email)
     # code gets verified a second time, consuming it this time
     verify_code(db, logger, uid, request.code, purpose="reset")  # don't delete the code after use
@@ -184,7 +176,7 @@ async def reset_password(request: UserResetPassword, db: Session = Depends(get_d
 
 
 @router.post("/verify-email")
-async def verify_email(request: UserCompleteVerify, db: Session = Depends(get_db)):
+async def verify_email(request: UserCompleteVerify, db: Annotated[Session, Depends(get_db)]):
     _, uid = await get_firebase_and_uid(email=request.email)
     verify_code(db, logger, uid, request.code, purpose="verify")  # verify w/o deletion'
 
@@ -204,14 +196,10 @@ async def verify_email(request: UserCompleteVerify, db: Session = Depends(get_db
 
 
 @router.get("/activity-ping")
-def activity_ping(current_user_token=Depends(get_current_user), db: Session = Depends(get_db)):
-    uid = current_user_token.get("uid")
-
-    current_user = db.query(User).filter(User.id == uid).first()
-    if not current_user:
-        logger.warning(f"User {uid} not found in DB during activity ping")
-        raise NotFound("User")
-
+def activity_ping(
+    current_user: Annotated[User, Depends(get_current_user)], db: Annotated[Session,
+                                                                            Depends(get_db)]
+):
     current_user.updated_at = datetime.now(timezone.utc)
     current_user.inactivity_notification_stage = None
 
