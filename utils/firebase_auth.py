@@ -22,13 +22,17 @@ logger = logging.getLogger("meteormate." + __name__)
 if not firebase_admin._apps:
     try:
         cred = credentials.Certificate(settings.FIREBASE_CREDENTIALS)
-        firebase_admin.initialize_app(cred, {
-            'storageBucket': settings.FIREBASE_STORAGE_BUCKET,
-        })
+        firebase_admin.initialize_app(
+            cred,
+            {
+                "storageBucket": settings.FIREBASE_STORAGE_BUCKET,
+            },
+        )
         logger.info("Firebase Admin SDK initialized successfully")
     except Exception as e:
         logger.critical(
-            f"Failed to initialize Firebase Admin SDK: {str(e)}", exc_info=settings.DEBUG
+            f"Failed to initialize Firebase Admin SDK: {str(e)}",
+            exc_info=settings.DEBUG,
         )
         raise
 
@@ -38,8 +42,9 @@ security = HTTPBearer()
 # more reason to hate YAPF
 async def get_current_user(
     credentials: Annotated[HTTPAuthorizationCredentials,
-                           Depends(security)], db: Annotated[Session, Depends(get_db)]
-) -> User:
+                           Depends(security)],
+    db: Annotated[Session, Depends(get_db)],
+) -> tuple[User, bool]:
     try:
         # verify the firebase token
         decoded_token = auth.verify_id_token(credentials.credentials)
@@ -71,7 +76,7 @@ async def get_current_user(
         raise Unauthorized("Authentication error")
 
 
-async def get_firebase_user(uid: str):
+def get_firebase_user(uid: str):
     try:
         user = auth.get_user(uid)
         return user
@@ -83,21 +88,3 @@ async def get_firebase_user(uid: str):
     except Exception as e:
         logger.error(f"Error fetching Firebase user {uid}: {str(e)}", exc_info=settings.DEBUG)
         raise InternalServerError("Error fetching Firebase user")
-
-
-async def get_firebase_and_uid(email: str = None, uid: str = None):
-    try:
-        if uid:
-            firebase_user = await get_firebase_user(uid)
-        elif email:
-            firebase_user = auth.get_user_by_email(email)
-        else:
-            raise ValueError("Either email or uid must be provided")
-
-        return firebase_user, firebase_user.uid
-
-    except auth.UserNotFoundError:
-        raise NotFound("User")
-    except Exception as e:
-        logger.error(str(e), exc_info=settings.DEBUG)
-        raise InternalServerError("Error fetching user")
