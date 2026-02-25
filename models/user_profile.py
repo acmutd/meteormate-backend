@@ -2,7 +2,7 @@
 # ACM MeteorMate | All Rights Reserved
 
 import enum
-from sqlalchemy import ARRAY, Column, DateTime, Text, ForeignKey, func, Numeric, Enum as SQLEnum, Boolean
+from sqlalchemy import ARRAY, Column, DateTime, Text, ForeignKey, func, Numeric, Enum as SQLEnum, Boolean, text
 from sqlalchemy.dialects.postgresql import ENUM as PGEnum
 from sqlalchemy.orm import relationship
 from sqlalchemy.ext.mutable import MutableList
@@ -46,8 +46,8 @@ class UserProfile(ORMBase):
     age = Column(Numeric)
 
     # notification preferences
-    match_notification = Column(Boolean, default=True)
-    promotional_notification = Column(Boolean, default=False)
+    match_notification = Column(Boolean, server_default=text("true"), nullable=False)
+    promotional_notification = Column(Boolean, server_default=text("false"), nullable=False)
 
     # behind-the-scenes stuff
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
