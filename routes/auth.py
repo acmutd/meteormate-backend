@@ -18,10 +18,10 @@ from models.user import (
     InactivityStage,
     User,
     UserRequestVerify,
-    UserCompleteVerify,
     UserResetPassword,
+    UserVerifyEmail,
 )
-from utils.firebase_auth import get_current_user, get_firebase_and_uid
+from utils.firebase_auth import get_current_user, get_firebase_user
 from utils.email import send_verification_email
 from schemas.user import UserCreate, UserResponse
 from utils.firebase_storage import delete_all_profile_pictures
@@ -124,9 +124,12 @@ async def delete_user_account(
 
 @router.post("/send-verification-code")
 async def send_verification_code(
-    request: UserRequestVerify, db: Annotated[Session, Depends(get_db)]
+    request: UserRequestVerify,
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[Session, Depends(get_db)],
 ):
-    firebase_user, uid = await get_firebase_and_uid(email=request.email, uid=request.uid)
+    uid = current_user.id
+    firebase_user = get_firebase_user(uid)
 
     purpose = request.purpose
 
@@ -191,8 +194,11 @@ async def reset_password(request: UserResetPassword, db: Annotated[Session, Depe
 
 
 @router.post("/verify-email")
-async def verify_email(request: UserCompleteVerify, db: Annotated[Session, Depends(get_db)]):
-    _, uid = await get_firebase_and_uid(email=request.email)
+async def verify_email(
+    request: UserVerifyEmail, current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[Session, Depends(get_db)]
+):
+    uid = current_user.uid
     verify_code(db, logger, uid, request.code, purpose="verify")  # verify w/o deletion'
 
     try:
