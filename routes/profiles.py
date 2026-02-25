@@ -20,6 +20,7 @@ from schemas.user_profile import (
     UserProfilePicture,
     UserProfileResponse,
     UserProfileUpdate,
+    UserUpdateNotifications,
 )
 from utils.firebase_auth import get_current_user
 
@@ -139,6 +140,32 @@ async def delete_profile_pic(
     profile.profile_picture_url.pop(index)
 
     commit_or_raise(db, logger, resource="user profile", uid=uid, action="delete")
+
+    db.refresh(profile)
+
+    return profile
+
+
+@router.post("/update_notifications", response_model=UserProfileResponse)
+async def update_notifications(
+    notification_updates: UserUpdateNotifications,
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[Session, Depends(get_db)],
+):
+    profile = current_user.profile
+    uid = current_user.id
+
+    if not profile:
+        logger.warning(f"profile not found for User {uid}")
+        raise NotFound("User profile")
+
+    if notification_updates.match_notifications is not None:
+        profile.match_notifications = notification_updates.match_notifications
+
+    if notification_updates.promotional_notifications is not None:
+        profile.promotional_notifications = (notification_updates.promotional_notifications)
+
+    commit_or_raise(db, logger, resource="user profile", uid=uid, action="update notifications")
 
     db.refresh(profile)
 
