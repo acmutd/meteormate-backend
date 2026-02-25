@@ -51,13 +51,10 @@ class User(ORMBase):
 
 
 class UserRequestVerify(BaseModel):
-    email: EmailStr
-    uid: Optional[str] = None
     purpose: Literal["verify", "reset"] = "verify"
 
 
-class UserCompleteVerify(BaseModel):
-    email: EmailStr
+class UserVerifyEmail(BaseModel):
     code: str
 
 
