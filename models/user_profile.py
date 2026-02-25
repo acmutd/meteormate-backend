@@ -2,7 +2,7 @@
 # ACM MeteorMate | All Rights Reserved
 
 import enum
-from sqlalchemy import ARRAY, Column, DateTime, Text, ForeignKey, func, Numeric, Enum as SQLEnum
+from sqlalchemy import ARRAY, Column, DateTime, Text, ForeignKey, func, Numeric, Enum as SQLEnum, Boolean
 from sqlalchemy.dialects.postgresql import ENUM as PGEnum
 from sqlalchemy.orm import relationship
 from sqlalchemy.ext.mutable import MutableList
@@ -29,12 +29,6 @@ CLASSIFICATION_ENUM = PGEnum(
 )
 
 
-class EmailPreferenceEnum(enum.Enum):
-    MATCHES = 'matches'
-    PROMOTIONS = 'promotions'
-    BOTH = 'both'
-
-
 class UserProfile(ORMBase):
     __tablename__ = "user_profiles"
 
@@ -51,16 +45,9 @@ class UserProfile(ORMBase):
     last_name = Column(Text)
     age = Column(Numeric)
 
-    email_preference = Column(
-        SQLEnum(
-            EmailPreferenceEnum,
-            name="email_preference_enum",
-            validate_strings=True,
-            values_callable=lambda enum: [e.value for e in enum]
-        ),
-        default=None,
-        nullable=True
-    )
+    # notification preferences
+    match_notification = Column(Boolean, default=True)
+    promotional_notification = Column(Boolean, default=False)
 
     # behind-the-scenes stuff
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
