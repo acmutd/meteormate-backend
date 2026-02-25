@@ -159,11 +159,11 @@ async def update_notifications(
         logger.warning(f"profile not found for User {uid}")
         raise NotFound("User profile")
 
-    if notification_updates.match_notifications is not None:
-        profile.match_notifications = notification_updates.match_notifications
+    if notification_updates.match_notification is not None:
+        profile.match_notification = notification_updates.match_notification
 
-    if notification_updates.promotional_notifications is not None:
-        profile.promotional_notifications = (notification_updates.promotional_notifications)
+    if notification_updates.promotional_notification is not None:
+        profile.promotional_notification = (notification_updates.promotional_notification)
 
     commit_or_raise(db, logger, resource="user profile", uid=uid, action="update notifications")
 

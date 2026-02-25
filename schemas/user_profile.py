@@ -34,8 +34,8 @@ class UserProfileBase(BaseModel):
     first_name: Optional[str] = None
     last_name: Optional[str] = None
     age: Optional[int] = None
-    match_notifications: Optional[bool] = True
-    promotional_notifications: Optional[bool] = False
+    match_notification: Optional[bool] = True
+    promotional_notification: Optional[bool] = False
 
     class Config:
         from_attributes = True
@@ -93,8 +93,10 @@ class UserProfileResponse(BaseModel):
     first_name: str
     last_name: str
     age: int
-    profile_picture_url: Optional[List[str]] = None
+    profile_picture_url: List[str]
     bio: str
+    match_notification: bool
+    promotional_notification: bool
 
     class Config:
         from_attributes = True
@@ -134,15 +136,15 @@ class UserProfilePicture(BaseModel):
 
 
 class UserUpdateNotifications(BaseModel):
-    match_notifications: Optional[bool] = None
-    promotional_notifications: Optional[bool] = None
+    match_notification: Optional[bool] = None
+    promotional_notification: Optional[bool] = None
 
     @model_validator(mode="before")
     @classmethod
     def validate_atleast_one(cls, values):
         if (
-            values.get("match_notifications") is None
-            and values.get("promotional_notifications") is None
+            values.get("match_notification") is None
+            and values.get("promotional_notification") is None
         ):
             raise BadRequest("At least one notification preference must be provided")
 
