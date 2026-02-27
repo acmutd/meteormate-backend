@@ -163,7 +163,7 @@ async def update_notifications(
         profile.match_notification = notification_updates.match_notification
 
     if notification_updates.promotional_notification is not None:
-        profile.promotional_notification = (notification_updates.promotional_notification)
+        profile.promotional_notification = notification_updates.promotional_notification
 
     commit_or_raise(db, logger, resource="user profile", uid=uid, action="update notifications")
 
