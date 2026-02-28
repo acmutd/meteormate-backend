@@ -1,7 +1,8 @@
 # Created by Ryan Polasky | 9/20/25
 # ACM MeteorMate | All Rights Reserved
 
-from sqlalchemy import ARRAY, Column, DateTime, Text, ForeignKey, func, Numeric
+import enum
+from sqlalchemy import ARRAY, Column, DateTime, Text, ForeignKey, func, Numeric, Enum as SQLEnum, Boolean, text
 from sqlalchemy.dialects.postgresql import ENUM as PGEnum
 from sqlalchemy.orm import relationship
 from sqlalchemy.ext.mutable import MutableList
@@ -43,6 +44,10 @@ class UserProfile(ORMBase):
     first_name = Column(Text)
     last_name = Column(Text)
     age = Column(Numeric)
+
+    # notification preferences
+    match_notification = Column(Boolean, server_default=text("true"), nullable=False)
+    promotional_notification = Column(Boolean, server_default=text("false"), nullable=False)
 
     # behind-the-scenes stuff
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
