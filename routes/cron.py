@@ -15,6 +15,7 @@ from models.user import User, InactivityStage
 from models.admin import Banlist
 from utils.email import send_inactive_notices
 from utils.exceptions import InternalServerError, Unauthorized
+from utils.firebase_auth import auth
 
 logger = logging.getLogger("meteormate." + __name__)
 
@@ -247,17 +248,29 @@ def delete_banned_users(x_cron_secret: str = Header(None), db: Session = Depends
 
     try:
         with db.begin():
+            # delete in firebase first
             two_weeks_ago = datetime.now(timezone.utc) - timedelta(days=14)
-            deleted_users = (
-                db.query(User).join(Banlist, User.id == Banlist.user_id).filter(
-                    Banlist.banned_at < two_weeks_ago
-                ).delete(synchronize_session=False)
-            )
+            banned_users = (db.query(Banlist).filter(Banlist.banned_at < two_weeks_ago).all())
+            successfully_banned = []
+            for ban in banned_users:
+                try:
+                    auth.delete_user(ban.user_id)
+                    logger.info(f"Deleted banned user {ban.user_id} from Firebase")
 
-            logger.info(f"Deleted {deleted_users} banned users from DB")
+                    # then delete in db
+                    db.delete(ban)
+                    successfully_banned.append(ban.user_id)
+                except Exception as firebase_err:
+                    logger.error(
+                        f"Failed to delete banned user {ban.user_id} from Firebase: {firebase_err}",
+                        exc_info=settings.DEBUG,
+                    )
+                    continue
+
+            logger.info(f"Deleted {banned_users} banned users from DB")
 
         logger.info("Banned user cleanup task completed successfully")
-        return {"deleted_users": deleted_users}
+        return {"deleted_users": banned_users}
     except SQLAlchemyError as e:
         logger.error(
             f"Database error during banned user cleanup task: {str(e)}",
