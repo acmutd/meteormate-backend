@@ -1,7 +1,7 @@
 # Created by Ryan Polasky | 1/4/26
 # ACM MeteorMate | All Rights Reserved
 
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import logging
 
 from fastapi import APIRouter, Depends, HTTPException, Header
@@ -12,6 +12,7 @@ from sqlalchemy.orm import Session
 from database import get_db
 from config import settings
 from models.user import User, InactivityStage
+from models.admin import Banlist
 from utils.email import send_inactive_notices
 from utils.exceptions import InternalServerError, Unauthorized
 
@@ -110,9 +111,14 @@ async def check_inactive_users(x_cron_secret: str = Header(None), db: Session = 
     # 1 month warning
     try:
         thirty_days_ago = now - timedelta(days=30)
-        users_need_one_month = db.query(User).filter(
-            and_(User.updated_at < thirty_days_ago, User.inactivity_notification_stage.is_(None))
-        ).all()
+        users_need_one_month = (
+            db.query(User).filter(
+                and_(
+                    User.updated_at < thirty_days_ago,
+                    User.inactivity_notification_stage.is_(None),
+                )
+            ).all()
+        )
 
         for user in users_need_one_month:
             try:
@@ -125,7 +131,7 @@ async def check_inactive_users(x_cron_secret: str = Header(None), db: Session = 
             except Exception as email_err:
                 logger.error(
                     f"Failed to send 1-month notice to User {user.id}: {email_err}",
-                    exc_info=settings.DEBUG
+                    exc_info=settings.DEBUG,
                 )
                 continue
 
@@ -137,12 +143,14 @@ async def check_inactive_users(x_cron_secret: str = Header(None), db: Session = 
     # 1 week warning
     try:
         fifty_three_days_ago = now - timedelta(days=53)
-        users_need_one_week = db.query(User).filter(
-            and_(
-                User.updated_at < fifty_three_days_ago,
-                User.inactivity_notification_stage == InactivityStage.ONE_MONTH
-            )
-        ).all()
+        users_need_one_week = (
+            db.query(User).filter(
+                and_(
+                    User.updated_at < fifty_three_days_ago,
+                    User.inactivity_notification_stage == InactivityStage.ONE_MONTH,
+                )
+            ).all()
+        )
 
         for user in users_need_one_week:
             try:
@@ -154,7 +162,7 @@ async def check_inactive_users(x_cron_secret: str = Header(None), db: Session = 
             except Exception as email_err:
                 logger.error(
                     f"Failed to send 1-week notice to User {user.id}: {email_err}",
-                    exc_info=settings.DEBUG
+                    exc_info=settings.DEBUG,
                 )
                 continue
 
@@ -166,12 +174,14 @@ async def check_inactive_users(x_cron_secret: str = Header(None), db: Session = 
     # Mark inactive
     try:
         sixty_days_ago = now - timedelta(days=60)
-        users_need_inactive = db.query(User).filter(
-            and_(
-                User.updated_at < sixty_days_ago,
-                User.inactivity_notification_stage == InactivityStage.ONE_WEEK
-            )
-        ).all()
+        users_need_inactive = (
+            db.query(User).filter(
+                and_(
+                    User.updated_at < sixty_days_ago,
+                    User.inactivity_notification_stage == InactivityStage.ONE_WEEK,
+                )
+            ).all()
+        )
 
         for user in users_need_inactive:
             try:
@@ -184,7 +194,7 @@ async def check_inactive_users(x_cron_secret: str = Header(None), db: Session = 
             except Exception as email_err:
                 logger.error(
                     f"Failed to send inactive notice to User {user.id}: {email_err}",
-                    exc_info=settings.DEBUG
+                    exc_info=settings.DEBUG,
                 )
                 continue
 
@@ -208,8 +218,10 @@ async def delete_pending_users(x_cron_secret: str = Header(None), db: Session = 
     try:
         with db.begin():
             # delete user where pending_deletion is true
-            deleted_users = db.query(User).where(User.pending_deletion.is_(True)
-                                                 ).delete(synchronize_session=False)
+            deleted_users = (
+                db.query(User).where(User.pending_deletion.is_(True)
+                                     ).delete(synchronize_session=False)
+            )
 
             logger.info(f"Deleted {deleted_users} delete pending users from DB")
 
@@ -218,6 +230,37 @@ async def delete_pending_users(x_cron_secret: str = Header(None), db: Session = 
     except SQLAlchemyError as e:
         logger.error(
             f"Database error during delete pending user cleanup task: {str(e)}",
-            exc_info=settings.DEBUG
+            exc_info=settings.DEBUG,
+        )
+        raise InternalServerError("Database error during cleanup")
+
+
+@router.post("/delete_banned_users")
+def delete_banned_users(x_cron_secret: str = Header(None), db: Session = Depends(get_db)):
+    # Delete banned users after two weeks in the banlist
+
+    if x_cron_secret != settings.CRON_SECRET or not settings.CRON_SECRET:
+        logger.warning("Unauthorized attempt to access /delete_banned_users")
+        raise Unauthorized("Unauthorized request")
+
+    logger.info("Starting scheduled DB cleanup task for banned users")
+
+    try:
+        with db.begin():
+            two_weeks_ago = datetime.now(timezone.utc) - timedelta(days=14)
+            deleted_users = (
+                db.query(User).join(Banlist, User.id == Banlist.user_id).filter(
+                    Banlist.banned_at < two_weeks_ago
+                ).delete(synchronize_session=False)
+            )
+
+            logger.info(f"Deleted {deleted_users} banned users from DB")
+
+        logger.info("Banned user cleanup task completed successfully")
+        return {"deleted_users": deleted_users}
+    except SQLAlchemyError as e:
+        logger.error(
+            f"Database error during banned user cleanup task: {str(e)}",
+            exc_info=settings.DEBUG,
         )
         raise InternalServerError("Database error during cleanup")
