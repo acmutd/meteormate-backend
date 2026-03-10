@@ -70,7 +70,7 @@ async def register_user(user_data: UserCreate, db: Annotated[Session, Depends(ge
 
 
 @router.get("/me", response_model=UserResponse)
-async def get_current_user_profile(current_user: Annotated[User, Depends(get_current_user)]):
+async def get_current_user_profile(current_user: Annotated[User, Depends(get_current_user)], ):
     logger.info(f"User {current_user.id} requested /me")
 
     return current_user
@@ -129,6 +129,7 @@ async def send_verification_code(
     db: Annotated[Session, Depends(get_db)],
 ):
     uid = current_user.id
+    email = current_user.email
     firebase_user = get_firebase_user(uid)
 
     purpose = request.purpose
@@ -143,7 +144,7 @@ async def send_verification_code(
     code = create_verification_code(db, logger, uid, request.purpose)
 
     try:
-        send_verification_email(str(request.email), code)
+        send_verification_email(str(email), code)
         logger.info(f"Successfully sent User {uid} an email for purpose {purpose}")
         return {"message": "Verification code sent to email"}
 
@@ -157,24 +158,17 @@ async def send_verification_code(
         raise InternalServerError("Failed to send verification code")
 
 
-# this is called immediately upon user trying to reset password but NO "new password" is asked for/received
-@router.post("/verify-reset-code")
-async def verify_reset_code(request: UserCompleteVerify, db: Annotated[Session, Depends(get_db)]):
-    _, uid = await get_firebase_and_uid(email=request.email)
-
-    verify_code(db, logger, uid, request.code, purpose="reset")  # verify w/o deleting from DB
-
-    logger.info(f"User {uid} successfully verified their password reset code")
-
-    return {"message": "Code verified"}
-
-
-# second portion of reset password flow, user has already verified code & is now sending us the new pwd to use
+# new flow: no need for a second check, this is the one and only check
 @router.post("/reset-password")
-async def reset_password(request: UserResetPassword, db: Annotated[Session, Depends(get_db)]):
-    _, uid = await get_firebase_and_uid(email=request.email)
-    # code gets verified a second time, consuming it this time
-    verify_code(db, logger, uid, request.code, purpose="reset")  # don't delete the code after use
+async def reset_password(
+    request: UserResetPassword,
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[Session, Depends(get_db)],
+):
+    uid = current_user.id
+
+    # code gets verified a second time, don't delete it first
+    verify_code(db, logger, uid, request.code, purpose="reset")
 
     try:
         auth.update_user(uid, password=request.new_password)
@@ -195,10 +189,11 @@ async def reset_password(request: UserResetPassword, db: Annotated[Session, Depe
 
 @router.post("/verify-email")
 async def verify_email(
-    request: UserVerifyEmail, current_user: Annotated[User, Depends(get_current_user)],
-    db: Annotated[Session, Depends(get_db)]
+    request: UserVerifyEmail,
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[Session, Depends(get_db)],
 ):
-    uid = current_user.uid
+    uid = current_user.id
     verify_code(db, logger, uid, request.code, purpose="verify")  # verify w/o deletion'
 
     try:
