@@ -86,7 +86,7 @@ async def ensure_admin(
     credentials: Annotated[HTTPAuthorizationCredentials,
                            Depends(security)],
     db: Annotated[Session, Depends(get_db)],
-) -> bool:
+):
     try:
         decoded_token = auth.verify_id_token(credentials.credentials)
         admin = db.query(Admins).filter(Admins.user_id == decoded_token["uid"]).first()
@@ -95,7 +95,6 @@ async def ensure_admin(
             logger.warning(f"Admin check failed: User {decoded_token['uid']} is not an admin")
             raise Unauthorized("Admin privileges required")
 
-        return True
     except auth.ExpiredIdTokenError:
         logger.warning("Admin check failed: Token Expired")
         raise Unauthorized("Firebase token has expired")

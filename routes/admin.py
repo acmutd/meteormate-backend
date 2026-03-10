@@ -17,13 +17,9 @@ router = APIRouter()
 @router.post("/ban_user/{user_id}")
 def ban_user(
     user_id: str,
-    is_admin: Annotated[bool, Depends(ensure_admin)],
     db: Annotated[Session, Depends(get_db)],
+    _: Annotated[None, Depends(ensure_admin)],
 ):
-    if not is_admin:
-        logger.warning(f"Unauthorized ban attempt by non-admin user")
-        raise Forbidden("Only admins can ban users")
-
     user = db.query(User).filter(User.id == user_id).first()
     if not user:
         logger.warning(f"Attempted to ban non-existent user {user_id}")
@@ -41,13 +37,9 @@ def ban_user(
 @router.post("/unban_user/{user_id}")
 def unban_user(
     user_id: str,
-    is_admin: Annotated[bool, Depends(ensure_admin)],
     db: Annotated[Session, Depends(get_db)],
+    _: Annotated[None, Depends(ensure_admin)],
 ):
-    if not is_admin:
-        logger.warning(f"Unauthorized unban attempt by non-admin user")
-        raise Forbidden("Only admins can unban users")
-
     ban_entry = db.query(Banlist).filter(Banlist.user_id == user_id).first()
     if not ban_entry:
         logger.warning(f"Attempted to unban non-banned user {user_id}")
@@ -63,13 +55,9 @@ def unban_user(
 @router.post("/add_admin/{user_id}")
 def add_admin(
     user_id: str,
-    is_admin: Annotated[bool, Depends(ensure_admin)],
     db: Annotated[Session, Depends(get_db)],
+    _: Annotated[None, Depends(ensure_admin)],
 ):
-    if not is_admin:
-        logger.warning(f"Unauthorized admin addition attempt by non-admin user")
-        raise Forbidden("Only admins can add new admins")
-
     user = db.query(User).filter(User.id == user_id).first()
     if not user:
         logger.warning(f"Attempted to add non-existent user {user_id} as admin")
@@ -92,13 +80,9 @@ def add_admin(
 @router.post("/remove_admin/{user_id}")
 def remove_admin(
     user_id: str,
-    is_admin: Annotated[bool, Depends(ensure_admin)],
     db: Annotated[Session, Depends(get_db)],
+    _: Annotated[None, Depends(ensure_admin)],
 ):
-    if not is_admin:
-        logger.warning(f"Unauthorized admin removal attempt by non-admin user")
-        raise Forbidden("Only admins can remove admins")
-
     admin_entry = db.query(Admins).filter(Admins.user_id == user_id).first()
     if not admin_entry:
         logger.warning(f"Attempted to remove non-admin user {user_id} from admins")
