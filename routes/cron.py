@@ -267,10 +267,10 @@ def delete_banned_users(x_cron_secret: str = Header(None), db: Session = Depends
                     )
                     continue
 
-            logger.info(f"Deleted {banned_users} banned users from DB")
+            logger.info(f"Deleted {successfully_banned} banned users from DB")
 
         logger.info("Banned user cleanup task completed successfully")
-        return {"deleted_users": banned_users}
+        return {"deleted_users": successfully_banned}
     except SQLAlchemyError as e:
         logger.error(
             f"Database error during banned user cleanup task: {str(e)}",
