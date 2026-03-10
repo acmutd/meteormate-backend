@@ -78,7 +78,7 @@ async def get_user_profile(uid: str, db: Annotated[Session, Depends(get_db)]):
         logger.warning(f"profile not found for User {uid}")
         raise NotFound("User profile")
 
-    if db.query(Banlist).filter(Banlist.utd_id == uid).first():
+    if db.query(Banlist).filter(Banlist.net_id == uid).first():
         logger.warning(f"User with Net ID {uid} attempted to access profile but is banned")
         raise Forbidden(
             "This user is banned from using this service. If you believe this is a mistake, please contact support."

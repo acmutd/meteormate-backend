@@ -12,7 +12,7 @@ from schemas.user_profile import UserProfileResponse
 class UserCreate(BaseModel):
     email: str
     password: str
-    utd_id: str
+    net_id: str
 
     @field_validator("email")
     def validate_utd_email(cls, v):
@@ -26,7 +26,7 @@ class UserCreate(BaseModel):
 
 class UserResponse(BaseModel):
     id: str
-    utd_id: str
+    net_id: str
     email: str
     created_at: datetime
 

@@ -21,7 +21,7 @@ class User(ORMBase):
     __tablename__ = "users"
 
     id = Column(Text, primary_key=True, index=True)
-    utd_id = Column(Text, unique=True, index=True)
+    net_id = Column(Text, unique=True, index=True)
     email = Column(Text, unique=True, index=True)
 
     # behind-the-scenes stuff

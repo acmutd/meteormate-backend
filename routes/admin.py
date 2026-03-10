@@ -2,7 +2,7 @@ import logging
 from typing import Annotated
 
 from fastapi import APIRouter, Depends
-from requests import Session
+from sqlalchemy.orm import Session
 
 from database import commit_or_raise, get_db
 from models.admin import Banlist, Admins
@@ -29,12 +29,12 @@ def ban_user(
         logger.warning(f"Attempted to ban non-existent user {user_id}")
         raise NotFound(f"User {user_id} not found")
 
-    banned_user = Banlist(user_id=user_id, net_id=user.utd_id)
+    banned_user = Banlist(user_id=user_id, net_id=user.net_id)
 
     db.add(banned_user)
     commit_or_raise(db, logger, resource="banlist entry", uid=user_id, action="create")
 
-    logger.info(f"User {user_id} (Net ID: {user.utd_id}) has been banned")
+    logger.info(f"User {user_id} (Net ID: {user.net_id}) has been banned")
     return {"message": f"User {user_id} has been banned"}
 
 
@@ -80,12 +80,12 @@ def add_admin(
         logger.warning(f"Attempted to add already-admin user {user_id} as admin again")
         raise Forbidden(f"User {user_id} is already an admin")
 
-    new_admin = Admins(user_id=user_id, net_id=user.utd_id)
+    new_admin = Admins(user_id=user_id, net_id=user.net_id)
 
     db.add(new_admin)
     commit_or_raise(db, logger, resource="admin entry", uid=user_id, action="create")
 
-    logger.info(f"User {user_id} (Net ID: {user.utd_id}) has been added as an admin")
+    logger.info(f"User {user_id} (Net ID: {user.net_id}) has been added as an admin")
     return {"message": f"User {user_id} has been added as an admin"}
 
 

@@ -42,15 +42,15 @@ router = APIRouter()
 @router.post("/register", response_model=UserResponse)
 async def register_user(user_data: UserCreate, db: Annotated[Session, Depends(get_db)]):
     if (
-        db.query(User).filter((User.utd_id == user_data.utd_id)
+        db.query(User).filter((User.net_id == user_data.net_id)
                               | (User.email == user_data.email)).first()
     ):
 
         logger.warning("user tried to create an account with an existing email/Net ID in DB")
         raise Conflict("Account already exists")
 
-    if db.query(Banlist).filter(Banlist.utd_id == user_data.utd_id).first():
-        logger.warning(f"User with Net ID {user_data.utd_id} attempted to register but is banned")
+    if db.query(Banlist).filter(Banlist.net_id == user_data.net_id).first():
+        logger.warning(f"User with Net ID {user_data.net_id} attempted to register but is banned")
         raise Forbidden(
             "You are banned from using this service. If you believe this is a mistake, please contact support."
         )
@@ -62,7 +62,7 @@ async def register_user(user_data: UserCreate, db: Annotated[Session, Depends(ge
             email=user_data.email, password=user_data.password, email_verified=False
         )
 
-        new_user = User(id=firebase_user.uid, email=user_data.email, utd_id=user_data.utd_id)
+        new_user = User(id=firebase_user.uid, email=user_data.email, net_id=user_data.net_id)
 
         db.add(new_user)
 
