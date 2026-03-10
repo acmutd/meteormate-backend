@@ -59,6 +59,5 @@ class UserVerifyEmail(BaseModel):
 
 
 class UserResetPassword(BaseModel):
-    email: EmailStr
     code: str
     new_password: str
