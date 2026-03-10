@@ -44,7 +44,7 @@ async def get_current_user(
     credentials: Annotated[HTTPAuthorizationCredentials,
                            Depends(security)],
     db: Annotated[Session, Depends(get_db)],
-) -> tuple[User, bool]:
+) -> User:
     try:
         # verify the firebase token
         decoded_token = auth.verify_id_token(credentials.credentials)
