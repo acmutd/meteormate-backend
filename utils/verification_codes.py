@@ -16,13 +16,17 @@ def create_verification_code(
     db: Session, route_logger: logging.Logger, uid: str, purpose: str
 ) -> str:
     code = str(random.randint(100000, 999999))
-    code_type = CodeType.PWD_RESET_CODE if purpose == "reset" else CodeType.ACC_VERIFICATION_CODE
+    code_type = (CodeType.PWD_RESET_CODE if purpose == "reset" else CodeType.ACC_VERIFICATION_CODE)
 
     new_code = VerificationCodes(user_id=uid, code=code, type=code_type)
     db.add(new_code)
 
     commit_or_raise(
-        db, route_logger, resource=f"{purpose} verification code", uid=uid, action="create"
+        db,
+        route_logger,
+        resource=f"{purpose} verification code",
+        uid=uid,
+        action="create",
     )
 
     return code
@@ -34,7 +38,7 @@ def verify_code(
     uid: str,
     code: str,
     purpose: str,
-    consume: bool = False
+    consume: bool = False,
 ):
     """
     General helper func. for verifying 6-digit codes.
@@ -44,19 +48,25 @@ def verify_code(
     :param purpose: Either `reset` for password reset or `verify` for email verification
     :param consume: Whether to delete the code from the DB after the check (defaults to False)
     """
-    code_type = CodeType.PWD_RESET_CODE.value if purpose == "reset" else CodeType.ACC_VERIFICATION_CODE.value
+    code_type = (
+        CodeType.PWD_RESET_CODE.value
+        if purpose == "reset" else CodeType.ACC_VERIFICATION_CODE.value
+    )
 
-    code_obj = db.query(VerificationCodes).filter(
-        VerificationCodes.user_id == uid, VerificationCodes.type == code_type
-    ).order_by(VerificationCodes.created_at.desc()).first()
-
-    expires_at = code_obj.created_at + timedelta(minutes=10)
+    code_obj = (
+        db.query(VerificationCodes).filter(
+            VerificationCodes.user_id == uid, VerificationCodes.type == code_type
+        ).order_by(VerificationCodes.created_at.desc()).first()
+    )
 
     if not code_obj:
         route_logger.warning(
             f"User {uid} attempted to {purpose}, but has no verification codes in the DB"
         )
         raise BadRequest("No verification code found")
+
+    expires_at = code_obj.created_at + timedelta(minutes=10)
+
     if datetime.now(timezone.utc) > expires_at:
         route_logger.warning(f"User {uid} attempted to {purpose} with an expired verification code")
         raise BadRequest("Verification code expired")
@@ -70,5 +80,9 @@ def verify_code(
         db.delete(code_obj)
 
         commit_or_raise(
-            db, route_logger, resource=f"{purpose} verification code", uid=uid, action="delete"
+            db,
+            route_logger,
+            resource=f"{purpose} verification code",
+            uid=uid,
+            action="delete",
         )
