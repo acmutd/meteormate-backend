@@ -9,8 +9,9 @@ import uuid
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
+from models.admin import Banlist
 from models.user import User
-from utils.exceptions import BadRequest, Conflict, NotFound
+from utils.exceptions import BadRequest, Conflict, Forbidden, NotFound
 from utils.firebase_storage import upload_profile_picture, delete_profile_picture
 
 from database import commit_or_raise, get_db
@@ -73,10 +74,15 @@ async def update_user_profile(
 @router.get("/get/{uid}", response_model=UserProfileResponse)
 async def get_user_profile(uid: str, db: Annotated[Session, Depends(get_db)]):
     profile = db.query(UserProfile).filter(UserProfile.user_id == uid).first()
-
     if not profile:
         logger.warning(f"profile not found for User {uid}")
         raise NotFound("User profile")
+
+    if db.query(Banlist).filter(Banlist.net_id == uid).first():
+        logger.warning(f"User with Net ID {uid} attempted to access profile but is banned")
+        raise Forbidden(
+            "This user is banned from using this service. If you believe this is a mistake, please contact support."
+        )
 
     return profile
 

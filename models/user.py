@@ -27,6 +27,7 @@ class User(ORMBase):
     # behind-the-scenes stuff
     is_active = Column(Boolean, nullable=False, server_default='true', default=True)
     pending_deletion = Column(Boolean, nullable=False, server_default='false', default=False)
+    is_banned = Column(Boolean, nullable=False, server_default='false', default=False)
 
     created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
     updated_at = Column(

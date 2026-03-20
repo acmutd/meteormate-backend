@@ -13,6 +13,7 @@ from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 
 from config import settings
 from database import get_db
+from models.admin import Admins, Banlist
 from models.user import User
 from utils.exceptions import InternalServerError, NotFound, Unauthorized
 
@@ -22,13 +23,17 @@ logger = logging.getLogger("meteormate." + __name__)
 if not firebase_admin._apps:
     try:
         cred = credentials.Certificate(settings.FIREBASE_CREDENTIALS)
-        firebase_admin.initialize_app(cred, {
-            'storageBucket': settings.FIREBASE_STORAGE_BUCKET,
-        })
+        firebase_admin.initialize_app(
+            cred,
+            {
+                "storageBucket": settings.FIREBASE_STORAGE_BUCKET,
+            },
+        )
         logger.info("Firebase Admin SDK initialized successfully")
     except Exception as e:
         logger.critical(
-            f"Failed to initialize Firebase Admin SDK: {str(e)}", exc_info=settings.DEBUG
+            f"Failed to initialize Firebase Admin SDK: {str(e)}",
+            exc_info=settings.DEBUG,
         )
         raise
 
@@ -38,7 +43,8 @@ security = HTTPBearer()
 # more reason to hate YAPF
 async def get_current_user(
     credentials: Annotated[HTTPAuthorizationCredentials,
-                           Depends(security)], db: Annotated[Session, Depends(get_db)]
+                           Depends(security)],
+    db: Annotated[Session, Depends(get_db)],
 ) -> User:
     try:
         # verify the firebase token
@@ -51,6 +57,11 @@ async def get_current_user(
         if not user:
             logger.warning(f"Auth failed: Firebase user {decoded_token['uid']} not found in DB")
             raise Unauthorized("Invalid credentials")
+
+        banned = (db.query(Banlist).filter(Banlist.user_id == decoded_token["uid"]).first())
+        if banned:
+            logger.warning(f"Auth failed: User {decoded_token['uid']} is banned")
+            raise Unauthorized("Your account has been banned")
 
         return user
 
@@ -68,6 +79,22 @@ async def get_current_user(
 
     except Exception as e:
         logger.error(f"Unexpected authentication error: {str(e)}", exc_info=settings.DEBUG)
+        raise Unauthorized("Authentication error")
+
+
+async def ensure_admin(
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[Session, Depends(get_db)],
+):
+    try:
+        admin = db.query(Admins).filter(Admins.net_id == current_user.utd_id).first()
+
+        if not admin:
+            logger.warning(f"Admin check failed: User {current_user.id} is not an admin")
+            raise Unauthorized("Admin privileges required")
+
+    except Exception as e:
+        logger.error(f"Unexpected error during admin check: {str(e)}", exc_info=settings.DEBUG)
         raise Unauthorized("Authentication error")
 
 
