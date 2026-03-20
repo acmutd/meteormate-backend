@@ -42,7 +42,7 @@ router = APIRouter()
 @router.post("/register", response_model=UserResponse)
 async def register_user(user_data: UserCreate, db: Annotated[Session, Depends(get_db)]):
     if (
-        db.query(User).filter((User.net_id == user_data.net_id)
+        db.query(User).filter((User.utd_id == user_data.net_id)
                               | (User.email == user_data.email)).first()
     ):
 
