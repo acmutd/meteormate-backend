@@ -8,7 +8,7 @@ from typing import Annotated
 import firebase_admin
 from firebase_admin import credentials, auth
 from sqlalchemy.orm import Session
-from fastapi import Depends
+from fastapi import Depends, Request
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 
 from config import settings
@@ -42,8 +42,8 @@ security = HTTPBearer()
 # more reason to hate YAPF
 async def get_current_user(
     credentials: Annotated[HTTPAuthorizationCredentials,
-                           Depends(security)],
-    db: Annotated[Session, Depends(get_db)],
+                           Depends(security)], db: Annotated[Session, Depends(get_db)],
+    request: Request
 ) -> User:
     try:
         # verify the firebase token
@@ -51,6 +51,15 @@ async def get_current_user(
 
         # SAFETY NET - Map 'uid' to 'id' for dumb devs (myself & me)
         decoded_token["id"] = decoded_token["uid"]  # this is never used btw
+
+        # check if user is email verified
+        endpoint_func = request.scope['endpoint']
+        endpoint_name = endpoint_func.__name__
+        if not decoded_token["email_verified"] and (
+            endpoint_name != "send_verification_code" and endpoint_name != "verify_email"
+        ):
+            logger.warning(f"Auth failed: Firebase user {decoded_token['uid']} email not verified")
+            raise Unauthorized("Email not verified")
 
         user = db.query(User).filter(User.id == decoded_token["uid"]).first()
         if not user:
@@ -72,6 +81,9 @@ async def get_current_user(
         raise Unauthorized("Invalid Firebase token")
 
     except Exception as e:
+        if isinstance(e, (Unauthorized)):
+            raise
+
         logger.error(f"Unexpected authentication error: {str(e)}", exc_info=settings.DEBUG)
         raise Unauthorized("Authentication error")
 
