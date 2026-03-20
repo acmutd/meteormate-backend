@@ -13,6 +13,7 @@ from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 
 from config import settings
 from database import get_db
+from models.admin import Admins, Banlist
 from models.user import User
 from utils.exceptions import InternalServerError, NotFound, Unauthorized
 
@@ -66,6 +67,11 @@ async def get_current_user(
             logger.warning(f"Auth failed: Firebase user {decoded_token['uid']} not found in DB")
             raise Unauthorized("Invalid credentials")
 
+        banned = (db.query(Banlist).filter(Banlist.user_id == decoded_token["uid"]).first())
+        if banned:
+            logger.warning(f"Auth failed: User {decoded_token['uid']} is banned")
+            raise Unauthorized("Your account has been banned")
+
         return user
 
     except auth.ExpiredIdTokenError:
@@ -88,7 +94,23 @@ async def get_current_user(
         raise Unauthorized("Authentication error")
 
 
-def get_firebase_user(uid: str):
+async def ensure_admin(
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[Session, Depends(get_db)],
+):
+    try:
+        admin = db.query(Admins).filter(Admins.net_id == current_user.utd_id).first()
+
+        if not admin:
+            logger.warning(f"Admin check failed: User {current_user.id} is not an admin")
+            raise Unauthorized("Admin privileges required")
+
+    except Exception as e:
+        logger.error(f"Unexpected error during admin check: {str(e)}", exc_info=settings.DEBUG)
+        raise Unauthorized("Authentication error")
+
+
+async def get_firebase_user(uid: str):
     try:
         user = auth.get_user(uid)
         return user

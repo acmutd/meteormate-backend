@@ -12,15 +12,11 @@ from fastapi.responses import JSONResponse, RedirectResponse
 
 from config import settings
 from utils.exceptions import AppException
-from routes import auth, survey, matches, cron, profiles
+from routes import auth, survey, matches, cron, profiles, admin
 
 
 def create_app() -> FastAPI:
-    app = FastAPI(
-        title="MeteorMate API",
-        version="1.0.0",
-        root_path="/api"
-    )
+    app = FastAPI(title="MeteorMate API", version="1.0.0", root_path="/api")
 
     # Logging
     logger = logging.getLogger("meteormate")
@@ -78,6 +74,7 @@ def create_app() -> FastAPI:
     app.include_router(matches.router, prefix="/matches", tags=["matches"])
     app.include_router(cron.router, prefix="/cron", tags=["cron"])
     app.include_router(profiles.router, prefix="/profiles", tags=["user_profiles"])
+    app.include_router(admin.router, prefix="/admin", tags=["admin"])
 
     @app.get("")
     async def root_no_slash():
