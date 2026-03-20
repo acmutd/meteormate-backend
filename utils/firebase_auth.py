@@ -83,27 +83,15 @@ async def get_current_user(
 
 
 async def ensure_admin(
-    credentials: Annotated[HTTPAuthorizationCredentials,
-                           Depends(security)],
+    current_user: Annotated[User, Depends(get_current_user)],
     db: Annotated[Session, Depends(get_db)],
 ):
     try:
-        decoded_token = auth.verify_id_token(credentials.credentials)
-        admin = db.query(Admins).filter(Admins.user_id == decoded_token["uid"]).first()
+        admin = db.query(Admins).filter(Admins.net_id == current_user.utd_id).first()
 
         if not admin:
-            logger.warning(f"Admin check failed: User {decoded_token['uid']} is not an admin")
+            logger.warning(f"Admin check failed: User {current_user.id} is not an admin")
             raise Unauthorized("Admin privileges required")
-
-    except auth.ExpiredIdTokenError:
-        logger.warning("Admin check failed: Token Expired")
-        raise Unauthorized("Firebase token has expired")
-    except auth.RevokedIdTokenError:
-        logger.warning("Admin check failed: Token Revoked")
-        raise Unauthorized("Firebase token has been revoked")
-    except auth.InvalidIdTokenError as e:
-        logger.warning(f"Admin check failed: Invalid Token - {str(e)}")
-        raise Unauthorized("Invalid Firebase token")
 
     except Exception as e:
         logger.error(f"Unexpected error during admin check: {str(e)}", exc_info=settings.DEBUG)
