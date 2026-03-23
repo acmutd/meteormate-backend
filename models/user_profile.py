@@ -45,6 +45,8 @@ class UserProfile(ORMBase):
     last_name = Column(Text)
     age = Column(Numeric)
 
+    dob = Column(DateTime(timezone=True), nullable=False)
+
     # notification preferences
     match_notification = Column(Boolean, server_default=text("true"), nullable=False)
     promotional_notification = Column(Boolean, server_default=text("false"), nullable=False)

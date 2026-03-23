@@ -33,7 +33,7 @@ class UserProfileBase(BaseModel):
     profile_picture_url: Optional[List[str]] = None
     first_name: Optional[str] = None
     last_name: Optional[str] = None
-    age: Optional[int] = None
+    dob: Optional[datetime] = None
     match_notification: Optional[bool] = True
     promotional_notification: Optional[bool] = False
 
@@ -56,16 +56,30 @@ class UserProfileBase(BaseModel):
 
         return validate_name(v, settings.LAST_NAME_MIN_LEN, settings.LAST_NAME_MAX_LEN, "last")
 
-    @field_validator("age")
+    @field_validator("dob")
     @classmethod
-    def validate_age(cls, v):
+    def validate_dob(cls, v):
         if v is None:
             return v
 
-        if not (settings.MIN_AGE <= v <= settings.MAX_AGE):
-            raise BadRequest(f"age must be between {settings.MIN_AGE} and {settings.MAX_AGE} years")
+        if v > datetime.now():
+            raise BadRequest("Date of birth cannot be in the future")
 
         return v
+
+    @property
+    def age(self) -> Optional[int]:
+        if self.dob is None:
+            return None
+
+        today = datetime.now()
+        age = (
+            today.year - self.dob.year - ((today.month, today.day) < (self.dob.month, self.dob.day))
+        )
+        if not (settings.MIN_AGE <= age <= settings.MAX_AGE):
+            raise BadRequest(f"age must be between {settings.MIN_AGE} and {settings.MAX_AGE} years")
+
+        return age
 
 
 class UserProfileCreate(UserProfileBase):
@@ -76,7 +90,7 @@ class UserProfileCreate(UserProfileBase):
     bio: str
     first_name: str
     last_name: str
-    age: int
+    dob: datetime
 
 
 class UserProfileUpdate(UserProfileBase):
@@ -93,6 +107,7 @@ class UserProfileResponse(BaseModel):
     first_name: str
     last_name: str
     age: int
+    dob: datetime
     profile_picture_url: List[str]
     bio: str
     match_notification: bool
