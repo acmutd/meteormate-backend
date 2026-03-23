@@ -23,7 +23,7 @@ from schemas.user_profile import (
     UserProfileUpdate,
     UserUpdateNotifications,
 )
-from utils.firebase_auth import get_current_user
+from utils.firebase_auth import ensure_email_verified
 
 logger = logging.getLogger("meteormate." + __name__)
 
@@ -33,7 +33,7 @@ router = APIRouter()
 @router.post("/create", response_model=UserProfileResponse)
 async def create_user_profile(
     profile_data: UserProfileCreate,
-    current_user: Annotated[User, Depends(get_current_user)],
+    current_user: Annotated[User, Depends(ensure_email_verified)],
     db: Annotated[Session, Depends(get_db)],
 ):
     if current_user.profile:
@@ -52,7 +52,7 @@ async def create_user_profile(
 @router.put("/update", response_model=UserProfileResponse)
 async def update_user_profile(
     profile_data: UserProfileUpdate,
-    current_user: Annotated[User, Depends(get_current_user)],
+    current_user: Annotated[User, Depends(ensure_email_verified)],
     db: Annotated[Session, Depends(get_db)],
 ):
     profile = current_user.profile
@@ -90,7 +90,7 @@ async def get_user_profile(uid: str, db: Annotated[Session, Depends(get_db)]):
 @router.post("/upload_picture", response_model=UserProfileResponse)
 async def upload_profile_pic(
     image_data: UserProfilePicture,
-    current_user: Annotated[User, Depends(get_current_user)],
+    current_user: Annotated[User, Depends(ensure_email_verified)],
     db: Annotated[Session, Depends(get_db)],
 ):
     profile = current_user.profile
@@ -120,7 +120,7 @@ async def upload_profile_pic(
 @router.delete("/delete_picture/{index}", response_model=UserProfileResponse)
 async def delete_profile_pic(
     index: int,
-    current_user: Annotated[User, Depends(get_current_user)],
+    current_user: Annotated[User, Depends(ensure_email_verified)],
     db: Annotated[Session, Depends(get_db)],
 ):
     uid = current_user.id
@@ -155,7 +155,7 @@ async def delete_profile_pic(
 @router.post("/update_notifications", response_model=UserProfileResponse)
 async def update_notifications(
     notification_updates: UserUpdateNotifications,
-    current_user: Annotated[User, Depends(get_current_user)],
+    current_user: Annotated[User, Depends(ensure_email_verified)],
     db: Annotated[Session, Depends(get_db)],
 ):
     profile = current_user.profile

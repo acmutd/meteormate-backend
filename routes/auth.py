@@ -14,25 +14,11 @@ from firebase_admin.exceptions import FirebaseError
 from database import commit_or_raise, get_db
 from config import settings
 from models.admin import Banlist
-from utils.exceptions import (
-    BadRequest,
-    Conflict,
-    Forbidden,
-    InternalServerError,
-    NotFound,
-)
-from models.user import (
-    InactivityStage,
-    User,
-    UserRequestVerify,
-    UserResetPassword,
-    UserVerifyEmail,
-)
-from utils.firebase_auth import get_current_user, get_firebase_user
-from utils.email import send_verification_email
-from schemas.user import UserCreate, UserResponse
+from models.user import InactivityStage, User
+from utils.exceptions import Conflict, Forbidden, InternalServerError
+from utils.firebase_auth import ensure_email_verified
 from utils.firebase_storage import delete_all_profile_pictures
-from utils.verification_codes import create_verification_code, verify_code
+from schemas.user import UserCreate, UserResponse
 
 logger = logging.getLogger("meteormate." + __name__)
 
@@ -83,7 +69,7 @@ async def register_user(user_data: UserCreate, db: Annotated[Session, Depends(ge
 
 
 @router.get("/me", response_model=UserResponse)
-async def get_current_user_profile(current_user: Annotated[User, Depends(get_current_user)], ):
+async def get_current_user_profile(current_user: Annotated[User, Depends(ensure_email_verified)], ):
     logger.info(f"User {current_user.id} requested /me")
 
     return current_user
@@ -92,7 +78,7 @@ async def get_current_user_profile(current_user: Annotated[User, Depends(get_cur
 # more reason to hate YAPF
 @router.delete("/delete")
 async def delete_user_account(
-    current_user: Annotated[User, Depends(get_current_user)],
+    current_user: Annotated[User, Depends(ensure_email_verified)],
     db: Annotated[Session, Depends(get_db)],
 ):
     current_user.pending_deletion = True
@@ -135,99 +121,9 @@ async def delete_user_account(
     return {"message": "Account deleted successfully"}
 
 
-@router.post("/send-verification-code")
-async def send_verification_code(
-    request: UserRequestVerify,
-    current_user: Annotated[User, Depends(get_current_user)],
-    db: Annotated[Session, Depends(get_db)],
-):
-    uid = current_user.id
-    email = current_user.email
-    firebase_user = get_firebase_user(uid)
-
-    purpose = request.purpose
-
-    if purpose == "verify" and firebase_user.email_verified:
-        raise BadRequest("Email already verified")
-    if purpose == "reset" and not firebase_user.email_verified:
-        raise BadRequest("Email not verified yet")
-
-    logger.info(f"User {uid} requested a verification code for purpose {purpose}")
-
-    code = create_verification_code(db, logger, uid, request.purpose)
-
-    try:
-        send_verification_email(str(email), code)
-        logger.info(f"Successfully sent User {uid} an email for purpose {purpose}")
-        return {"message": "Verification code sent to email"}
-
-    except Exception as e:
-        db.rollback()
-        logger.error(
-            f"There was an error sending an email to User {uid}: {str(e)}",
-            exc_info=settings.DEBUG,
-        )
-
-        raise InternalServerError("Failed to send verification code")
-
-
-# new flow: no need for a second check, this is the one and only check
-@router.post("/reset-password")
-async def reset_password(
-    request: UserResetPassword,
-    current_user: Annotated[User, Depends(get_current_user)],
-    db: Annotated[Session, Depends(get_db)],
-):
-    uid = current_user.id
-
-    # code gets verified a second time, don't delete it first
-    verify_code(db, logger, uid, request.code, purpose="reset")
-
-    try:
-        auth.update_user(uid, password=request.new_password)
-    except Exception as e:
-        logger.error(
-            f"There was an error updating User {uid}'s password: {str(e)}",
-            exc_info=settings.DEBUG,
-        )
-        raise InternalServerError("Error updating password")
-
-    # we eat the code AFTER Firebase runs w/o a hitch to avoid invalidating the code
-    # after an unsuccessful attempt
-    verify_code(db, logger, uid, request.code, purpose="reset", consume=True)
-
-    logger.info(f"User {uid} successfully updated their password")
-    return {"message": "Password updated successfully"}
-
-
-@router.post("/verify-email")
-async def verify_email(
-    request: UserVerifyEmail,
-    current_user: Annotated[User, Depends(get_current_user)],
-    db: Annotated[Session, Depends(get_db)],
-):
-    uid = current_user.id
-    verify_code(db, logger, uid, request.code, purpose="verify")  # verify w/o deletion'
-
-    try:
-        auth.update_user(uid, email_verified=True)
-    except Exception as e:
-        logger.error(
-            f"There was an error verifying User {uid}'s email: {str(e)}",
-            exc_info=settings.DEBUG,
-        )
-        raise InternalServerError("Error updating user")
-
-    # keep this doubled/consuming AFTER Firebase checks to avoid codes being expired by Firebase errors
-    verify_code(db, logger, uid, request.code, purpose="verify", consume=True)  # verify & consume
-
-    logger.info(f"User {uid} successfully verified their email")
-    return {"message": "Email verified successfully"}
-
-
 @router.get("/activity-ping")
 def activity_ping(
-    current_user: Annotated[User, Depends(get_current_user)],
+    current_user: Annotated[User, Depends(ensure_email_verified)],
     db: Annotated[Session, Depends(get_db)],
 ):
     current_user.updated_at = datetime.now(timezone.utc)
@@ -240,7 +136,7 @@ def activity_ping(
 
 @router.post("/mark-inactive")
 def mark_inactive(
-    current_user: Annotated[User, Depends(get_current_user)],
+    current_user: Annotated[User, Depends(ensure_email_verified)],
     db: Annotated[Session, Depends(get_db)],
 ):
     current_user.inactivity_notification_stage = InactivityStage.INACTIVE

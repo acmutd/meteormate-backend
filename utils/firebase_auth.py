@@ -43,8 +43,8 @@ security = HTTPBearer()
 # more reason to hate YAPF
 async def get_current_user(
     credentials: Annotated[HTTPAuthorizationCredentials,
-                           Depends(security)], db: Annotated[Session, Depends(get_db)],
-    request: Request
+                           Depends(security)],
+    db: Annotated[Session, Depends(get_db)],
 ) -> User:
     try:
         # verify the firebase token
@@ -52,15 +52,6 @@ async def get_current_user(
 
         # SAFETY NET - Map 'uid' to 'id' for dumb devs (myself & me)
         decoded_token["id"] = decoded_token["uid"]  # this is never used btw
-
-        # check if user is email verified
-        endpoint_func = request.scope['endpoint']
-        endpoint_name = endpoint_func.__name__
-        if not decoded_token["email_verified"] and (
-            endpoint_name != "send_verification_code" and endpoint_name != "verify_email"
-        ):
-            logger.warning(f"Auth failed: Firebase user {decoded_token['uid']} email not verified")
-            raise Unauthorized("Email not verified")
 
         user = db.query(User).filter(User.id == decoded_token["uid"]).first()
         if not user:
@@ -94,6 +85,14 @@ async def get_current_user(
         raise Unauthorized("Authentication error")
 
 
+def ensure_email_verified(current_user: Annotated[User, Depends(get_current_user)]) -> User:
+    if not current_user.email_verified:
+        logger.warning(f"Email verification failed for User {current_user.id}")
+        raise Unauthorized("Email verification required")
+
+    return current_user
+
+
 async def ensure_admin(
     current_user: Annotated[User, Depends(get_current_user)],
     db: Annotated[Session, Depends(get_db)],
@@ -110,10 +109,30 @@ async def ensure_admin(
         raise Unauthorized("Authentication error")
 
 
-async def get_firebase_user(uid: str):
+def get_firebase_user(uid: str = None, email: str = None) -> auth.UserRecord:
+    """
+    Fetches a Firebase user by UID or email. At least one of uid or email must be provided.
+    Args:
+        - uid: The UID of the Firebase user to fetch
+        - email: The email of the Firebase user to fetch
+    Returns:
+        - user: auth.UserRecord object representing the Firebase user
+    Raises:
+        - ValueError: If neither uid nor email is provided
+        - NotFound: If no Firebase user is found with the provided uid or email
+        - InternalServerError: If there is an error fetching the Firebase user
+    """
+    if not uid and not email:
+        logger.warning("get_firebase_user called without uid or email")
+        raise ValueError("Must provide either uid or email to fetch Firebase user")
+
     try:
-        user = auth.get_user(uid)
-        return user
+        if uid:
+            user = auth.get_user(uid)
+            return user
+        elif email:
+            user = auth.get_user_by_email(email)
+            return user
 
     except auth.UserNotFoundError:
         logger.warning(f"Requested Firebase user {uid} not found")

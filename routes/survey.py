@@ -13,7 +13,7 @@ from utils.exceptions import BadRequest, NotFound
 from models.survey import Survey
 from models.user import User
 from schemas.survey import SurveyCreate, SurveyResponse, SurveyUpdate
-from utils.firebase_auth import get_current_user
+from utils.firebase_auth import ensure_email_verified
 
 logger = logging.getLogger("meteormate." + __name__)
 router = APIRouter()
@@ -22,7 +22,7 @@ router = APIRouter()
 @router.post("", response_model=SurveyResponse)
 async def create_survey(
     survey_data: SurveyCreate,
-    current_user: Annotated[User, Depends(get_current_user)],
+    current_user: Annotated[User, Depends(ensure_email_verified)],
     db: Annotated[Session, Depends(get_db)],
 ):
     uid = current_user.id
@@ -42,7 +42,7 @@ async def create_survey(
 
 
 @router.get("/me", response_model=SurveyResponse)
-async def get_my_survey(current_user: Annotated[User, Depends(get_current_user)]):
+async def get_my_survey(current_user: Annotated[User, Depends(ensure_email_verified)]):
     uid = current_user.id
 
     if not current_user.survey:
@@ -56,7 +56,7 @@ async def get_my_survey(current_user: Annotated[User, Depends(get_current_user)]
 @router.put("", response_model=SurveyResponse)
 async def update_survey(
     survey_data: SurveyUpdate,
-    current_user: Annotated[User, Depends(get_current_user)],
+    current_user: Annotated[User, Depends(ensure_email_verified)],
     db: Annotated[Session, Depends(get_db)],
 ):
     uid = current_user.id
