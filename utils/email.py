@@ -71,7 +71,7 @@ def send_inactive_notices(email: str, notice_num: int):
         msg['To'] = email
 
         # load the template using python modules with importlib
-        html = resources.files("static").joinpath("reset_password.html").read_text(
+        html = resources.files("static").joinpath("inactivity_warning.html").read_text(
             encoding="utf-8"
         ).replace("{inactivity_warning}", inactivity_warning)
 
