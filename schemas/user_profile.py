@@ -77,7 +77,7 @@ class UserProfileBase(BaseModel):
             today.year - self.dob.year - ((today.month, today.day) < (self.dob.month, self.dob.day))
         )
         if not (settings.MIN_AGE <= age <= settings.MAX_AGE):
-            raise BadRequest(f"age must be between {settings.MIN_AGE} and {settings.MAX_AGE} years")
+            raise BadRequest(f"Age must be between {settings.MIN_AGE} and {settings.MAX_AGE} years")
 
         return age
 
