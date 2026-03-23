@@ -8,7 +8,7 @@ from typing import Annotated
 import firebase_admin
 from firebase_admin import credentials, auth
 from sqlalchemy.orm import Session
-from fastapi import Depends
+from fastapi import Depends, Request
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 
 from config import settings
@@ -78,8 +78,19 @@ async def get_current_user(
         raise Unauthorized("Invalid Firebase token")
 
     except Exception as e:
+        if isinstance(e, (Unauthorized)):
+            raise
+
         logger.error(f"Unexpected authentication error: {str(e)}", exc_info=settings.DEBUG)
         raise Unauthorized("Authentication error")
+
+
+def ensure_email_verified(current_user: Annotated[User, Depends(get_current_user)]) -> User:
+    if not current_user.email_verified:
+        logger.warning(f"Email verification failed for User {current_user.id}")
+        raise Unauthorized("Email verification required")
+
+    return current_user
 
 
 async def ensure_admin(
@@ -98,10 +109,30 @@ async def ensure_admin(
         raise Unauthorized("Authentication error")
 
 
-async def get_firebase_user(uid: str):
+def get_firebase_user(uid: str = None, email: str = None) -> auth.UserRecord:
+    """
+    Fetches a Firebase user by UID or email. At least one of uid or email must be provided.
+    Args:
+        - uid: The UID of the Firebase user to fetch
+        - email: The email of the Firebase user to fetch
+    Returns:
+        - user: auth.UserRecord object representing the Firebase user
+    Raises:
+        - ValueError: If neither uid nor email is provided
+        - NotFound: If no Firebase user is found with the provided uid or email
+        - InternalServerError: If there is an error fetching the Firebase user
+    """
+    if not uid and not email:
+        logger.warning("get_firebase_user called without uid or email")
+        raise ValueError("Must provide either uid or email to fetch Firebase user")
+
     try:
-        user = auth.get_user(uid)
-        return user
+        if uid:
+            user = auth.get_user(uid)
+            return user
+        elif email:
+            user = auth.get_user_by_email(email)
+            return user
 
     except auth.UserNotFoundError:
         logger.warning(f"Requested Firebase user {uid} not found")
@@ -110,21 +141,3 @@ async def get_firebase_user(uid: str):
     except Exception as e:
         logger.error(f"Error fetching Firebase user {uid}: {str(e)}", exc_info=settings.DEBUG)
         raise InternalServerError("Error fetching Firebase user")
-
-
-async def get_firebase_and_uid(email: str = None, uid: str = None):
-    try:
-        if uid:
-            firebase_user = await get_firebase_user(uid)
-        elif email:
-            firebase_user = auth.get_user_by_email(email)
-        else:
-            raise ValueError("Either email or uid must be provided")
-
-        return firebase_user, firebase_user.uid
-
-    except auth.UserNotFoundError:
-        raise NotFound("User")
-    except Exception as e:
-        logger.error(str(e), exc_info=settings.DEBUG)
-        raise InternalServerError("Error fetching user")

@@ -49,20 +49,3 @@ class User(ORMBase):
     profile = relationship(
         "UserProfile", back_populates="user", uselist=False, cascade="all, delete-orphan"
     )
-
-
-class UserRequestVerify(BaseModel):
-    email: EmailStr
-    uid: Optional[str] = None
-    purpose: Literal["verify", "reset"] = "verify"
-
-
-class UserCompleteVerify(BaseModel):
-    email: EmailStr
-    code: str
-
-
-class UserResetPassword(BaseModel):
-    email: EmailStr
-    code: str
-    new_password: str

@@ -45,3 +45,13 @@ class UserResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+class UserVerifyEmail(BaseModel):
+    code: str
+
+
+class UserResetPassword(BaseModel):
+    email: str
+    code: str
+    new_password: str
