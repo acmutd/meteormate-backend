@@ -91,7 +91,8 @@ async def get_current_user(
 def ensure_email_verified(
     current_user: Annotated[User, Depends(get_current_user)],
 ) -> User:
-    if not current_user.email_verified:
+    firebase_user = get_firebase_user(uid=current_user.id)
+    if not firebase_user.email_verified:
         logger.warning(f"Email verification failed for User {current_user.id}")
         raise Unauthorized("Email verification required")
 
