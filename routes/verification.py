@@ -73,19 +73,13 @@ def account_verification(
 
     try:
         auth.update_user(uid, email_verified=True)
-        next(verify_gen)  # consume code after Firebase update succeeds
+        next(verify_gen, None)  # consume code after Firebase update succeeds, raises if error happens during deletion
     except Exception as e:
         logger.error(
             f"There was an error verifying User {uid}'s email: {str(e)}",
             exc_info=settings.DEBUG,
         )
         raise InternalServerError("Error updating user")
-    except StopIteration:
-        logger.error(
-            f"Verification code for User {uid} was valid but failed to be consumed after email verification",
-            exc_info=settings.DEBUG,
-        )
-        raise InternalServerError("Error consuming verification code")
 
     logger.info(f"User {uid} successfully verified their account")
     return {"message": "Email verified successfully"}
@@ -143,19 +137,13 @@ def reset_password(
 
     try:
         auth.update_user(uid, password=request.new_password)
-        next(verify_gen)  # consume code after Firebase update succeeds
+        next(verify_gen, None)  # consume code after Firebase update succeeds
     except FirebaseError as e:
         logger.error(
             f"There was an error resetting password for User {uid}: {str(e)}",
             exc_info=settings.DEBUG,
         )
         raise InternalServerError("Error updating user")
-    except StopIteration:
-        logger.error(
-            f"Verification code for User {uid} was valid but failed to be consumed after password reset",
-            exc_info=settings.DEBUG,
-        )
-        raise InternalServerError("Error consuming verification code")
 
     logger.info(f"User {uid} successfully reset their password")
     return {"message": "Password reset successfully"}
