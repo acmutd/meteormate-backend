@@ -48,7 +48,7 @@ async def register_user(user_data: UserCreate, db: Annotated[Session, Depends(ge
             email=user_data.email, password=user_data.password, email_verified=False
         )
 
-        new_user = User(id=firebase_user.uid, email=user_data.email, net_id=user_data.net_id)
+        new_user = User(id=firebase_user.uid, email=user_data.email, utd_id=user_data.net_id)
 
         db.add(new_user)
 
