@@ -42,8 +42,7 @@ security = HTTPBearer()
 
 # more reason to hate YAPF
 async def get_current_user(
-    credentials: Annotated[HTTPAuthorizationCredentials,
-                           Depends(security)],
+    credentials: Annotated[HTTPAuthorizationCredentials, Depends(security)],
     db: Annotated[Session, Depends(get_db)],
 ) -> User:
     try:
@@ -55,10 +54,12 @@ async def get_current_user(
 
         user = db.query(User).filter(User.id == decoded_token["uid"]).first()
         if not user:
-            logger.warning(f"Auth failed: Firebase user {decoded_token['uid']} not found in DB")
+            logger.warning(
+                f"Auth failed: Firebase user {decoded_token['uid']} not found in DB"
+            )
             raise Unauthorized("Invalid credentials")
 
-        banned = (db.query(Banlist).filter(Banlist.user_id == decoded_token["uid"]).first())
+        banned = db.query(Banlist).filter(Banlist.net_id == user.utd_id).first()
         if banned:
             logger.warning(f"Auth failed: User {decoded_token['uid']} is banned")
             raise Unauthorized("Your account has been banned")
@@ -81,11 +82,15 @@ async def get_current_user(
         if isinstance(e, (Unauthorized)):
             raise
 
-        logger.error(f"Unexpected authentication error: {str(e)}", exc_info=settings.DEBUG)
+        logger.error(
+            f"Unexpected authentication error: {str(e)}", exc_info=settings.DEBUG
+        )
         raise Unauthorized("Authentication error")
 
 
-def ensure_email_verified(current_user: Annotated[User, Depends(get_current_user)]) -> User:
+def ensure_email_verified(
+    current_user: Annotated[User, Depends(get_current_user)],
+) -> User:
     if not current_user.email_verified:
         logger.warning(f"Email verification failed for User {current_user.id}")
         raise Unauthorized("Email verification required")
@@ -101,11 +106,16 @@ async def ensure_admin(
         admin = db.query(Admins).filter(Admins.net_id == current_user.utd_id).first()
 
         if not admin:
-            logger.warning(f"Admin check failed: User {current_user.id} is not an admin")
+            logger.warning(
+                f"Admin check failed: User {current_user.id} is not an admin"
+            )
             raise Unauthorized("Admin privileges required")
 
+        return current_user
     except Exception as e:
-        logger.error(f"Unexpected error during admin check: {str(e)}", exc_info=settings.DEBUG)
+        logger.error(
+            f"Unexpected error during admin check: {str(e)}", exc_info=settings.DEBUG
+        )
         raise Unauthorized("Authentication error")
 
 
@@ -139,5 +149,7 @@ def get_firebase_user(uid: str = None, email: str = None) -> auth.UserRecord:
         raise NotFound("Firebase user")
 
     except Exception as e:
-        logger.error(f"Error fetching Firebase user {uid}: {str(e)}", exc_info=settings.DEBUG)
+        logger.error(
+            f"Error fetching Firebase user {uid}: {str(e)}", exc_info=settings.DEBUG
+        )
         raise InternalServerError("Error fetching Firebase user")
