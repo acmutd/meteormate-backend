@@ -101,7 +101,7 @@ def ensure_email_verified(
 async def ensure_admin(
     current_user: Annotated[User, Depends(get_current_user)],
     db: Annotated[Session, Depends(get_db)],
-):
+) -> User:
     try:
         admin = db.query(Admins).filter(Admins.net_id == current_user.utd_id).first()
 
