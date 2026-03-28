@@ -2,7 +2,7 @@
 # ACM MeteorMate | All Rights Reserved
 
 import enum
-from sqlalchemy import ARRAY, Column, DateTime, Text, ForeignKey, func, Numeric, Enum as SQLEnum, Boolean, text
+from sqlalchemy import ARRAY, Column, Text, ForeignKey, func, Numeric, Enum as SQLEnum, Boolean, text, Date, DateTime
 from sqlalchemy.dialects.postgresql import ENUM as PGEnum
 from sqlalchemy.orm import relationship
 from sqlalchemy.ext.mutable import MutableList
@@ -45,7 +45,7 @@ class UserProfile(ORMBase):
     last_name = Column(Text)
     age = Column(Numeric)
 
-    dob = Column(DateTime(timezone=True), nullable=False)
+    dob = Column(Date(), nullable=False)
 
     # notification preferences
     match_notification = Column(Boolean, server_default=text("true"), nullable=False)
