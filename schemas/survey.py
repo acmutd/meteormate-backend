@@ -62,6 +62,8 @@ class SurveyCreate(BaseModel):
     smoke_vape: bool = False
     drink: bool = False
 
+    relevant_answers: List[Any]
+
 
 class SurveyUpdate(BaseModel):
     housing_intent: Optional[HousingIntentEnum] = None

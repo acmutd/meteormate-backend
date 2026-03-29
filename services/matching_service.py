@@ -2,10 +2,12 @@
 # ACM MeteorMate | All Rights Reserved
 
 import logging
+import numpy as np
 from typing import List, Dict
 
 from sqlalchemy.orm import Session
 from models.user import User
+from models.user_profile import UserProfile
 from models.survey import Survey
 from models.matches import Match
 
@@ -14,111 +16,74 @@ logger = logging.getLogger("meteormate." + __name__)
 
 class MatchingService:
 
-    def __init__(self, db: Session):
+    def __init__(self, db, sim_matrix: np.array, question_weights: np.array):
         self.db = db
+        self.sim_matrix = sim_matrix
+        self.q_weights = question_weights
+        self.q_idx = np.arange(30)
 
-    async def find_potential_matches(self, user_id: str, limit: int = 10) -> List[Dict]:
-        logger.info(f"Finding potential matches for User {user_id}")
-
+    def find_potential_matches(self, user_id: str, limit: int = 10) -> List[str]:
         # get user's survey
         user_survey = self.db.query(Survey).filter(Survey.user_id == user_id).first()
         if not user_survey:
-            logger.warning(f"User {user_id} has no survey, returning 0 matches")
             return []
 
-        # get IDs of users already passed/matched
-        interacted_user_ids = (
-            self.db.query(Match.target_user_id).filter(Match.user_id == user_id).all()
-        )
-        # extract IDs
-        seen_ids = {uid for (uid, ) in interacted_user_ids}
-        seen_ids.add(user_id)  # exclude the user themselves obviously
+        # find all other users that should be filtered out
+        inactive_users = self.db.query(User).filter(User.is_active == False).all()
+        inactive_user_ids = [user.id for user in inactive_users]
+        inactive_user_ids.append(user_id)
+        # filter out all the inactive users
+        other_surveys = self.db.query(Survey).filter(Survey.user_id.notin_(set(inactive_user_ids))).all()
+        other_ids = np.array([survey.user_id for survey in other_surveys], dtype=object)
 
-        # get other users' surveys (excluding already matched/passed)
-        other_surveys = (
-            self.db.query(Survey).filter(Survey.user_id.notin_(seen_ids)).limit(limit * 2).all()
-        )
-
-        matches = []
-        for survey in other_surveys:
-            compatibility_score = self._calculate_compatibility(user_survey, survey)
-
-            user = self.db.query(User).filter(User.id == survey.user_id).first()
-
-            if not user:
-                continue
-
-            matches.append({
+        # parallelize compatibility calculations for all other users 
+        user_vector = np.expand_dims(np.array(list(user_survey.relevant_answers)), axis=0) # shape = (1, Q) where Q is number of survey questions
+        other_vectors = np.array([list(other_survey.relevant_answers) for other_survey in other_surveys]) # shape = (N, Q) where N is number of other users (that passed the inactivity filtering)
+        sim_scores = self.sim_matrix[self.q_idx, user_vector, other_vectors] # shape = (Q, C, C) where C is max number of answer choices across any question (5 in our case, at least for now)
+        average_sim_scores = np.sum(self.q_weights * sim_scores / np.sum(self.q_weights, axis=-1), axis=-1) # shape = (N, 1)
+        sorted_other_ids = other_ids[np.argsort(average_sim_scores)[::-1]] # shape = (N, 1)
+    
+        sorted_records = []
+        for curr_id in list(sorted_other_ids):
+            # get all the relevant database schema info for each user
+            curr_user_survey_record = self.db.query(Survey).filter(Survey.user_id == curr_id).first()
+            curr_user_profile_record = self.db.query(UserProfile).filter(UserProfile.user_id == curr_id).first()
+            
+            sorted_records.append({
                 "user": {
-                    "uid": user.id,
-                    "first_name": user.first_name,
-                    "last_name": user.last_name,
+                    "uid": curr_user_profile_record.user_id,
+                    "first_name": curr_user_profile_record.gender,
+                    "major": curr_user_profile_record.major,
+                    "classification": curr_user_profile_record.classification,
+                    "bio": curr_user_profile_record.bio
                 },
                 "survey": {
-                    "housing_type": survey.housing_type,
-                    "budget_range": f"${survey.budget_min}-${survey.budget_max}",
-                    "cleanliness_level": survey.cleanliness_level,
-                    "noise_level": survey.noise_level,
-                    "sleep_schedule": survey.sleep_schedule,
-                    "interests": survey.interests
-                },
-                "compatibility_score": compatibility_score
+                    "housing_intent": curr_user_survey_record.housing_intent,
+                    "budget_min": curr_user_survey_record.budget_min,
+                    "budget_max": curr_user_survey_record.budget_max,
+                    "move_in_date": curr_user_survey_record.move_in_date,
+                    "wake_time": curr_user_survey_record.wake_time,
+                    "cleanliness": curr_user_survey_record.cleanliness,
+                    "noise_tolerance": curr_user_survey_record.noise_tolerance,
+                    "interests": curr_user_survey_record.interests,
+                    "dealbreakers": curr_user_survey_record.dealbreakers,
+                    "cooking_frequency": curr_user_survey_record.cooking_frequency,
+                    "pet_preference": curr_user_survey_record.pet_preference,
+                    "guests_frequency": curr_user_survey_record.guests_frequency,
+                    "roommate_closeness": curr_user_survey_record.roommate_closeness,
+                    "on_campus_locations": curr_user_survey_record.on_campus_locations,
+                    "honors": curr_user_survey_record.honors,
+                    "llc_interest": curr_user_survey_record.llc_interest,
+                    "num_roommates": curr_user_survey_record.num_roommates,
+                    "have_lease": curr_user_survey_record.have_lease,
+                    "have_lease_length": curr_user_survey_record.have_lease_length,
+                    "smoke_vape": curr_user_survey_record.smoke_vape,
+                    "drink": curr_user_survey_record.drink
+                }
             })
+        
+        return sorted_records[:limit]
 
-        # sort by compatibility score
-        matches.sort(key=lambda x: x["compatibility_score"], reverse=True)
-
-        logger.info(f"Found {len(matches)} potential matches for User {user_id}")
-        return matches[:limit]
-
-    def _calculate_compatibility(self, user_survey: Survey, other_survey: Survey) -> float:
-        score = 0.0
-
-        # budget compatibility (30% weight)
-        if self._budgets_overlap(user_survey, other_survey):
-            score += 30
-
-        # lifestyle compatibility (40% weight)
-        lifestyle_score = 0
-        lifestyle_score += self._compare_numeric_preference(
-            user_survey.cleanliness_level, other_survey.cleanliness_level, 2
-        )
-        lifestyle_score += self._compare_numeric_preference(
-            user_survey.noise_level, other_survey.noise_level, 2
-        )
-        lifestyle_score += (10 if user_survey.sleep_schedule == other_survey.sleep_schedule else 0)
-        lifestyle_score += (10 if user_survey.study_habits == other_survey.study_habits else 0)
-
-        score += (lifestyle_score / 40) * 40
-
-        # interests compatibility (20% weight)
-        common_interests = set(user_survey.interests) & set(other_survey.interests)
-        interest_score = min(len(common_interests) * 5, 20)
-        score += interest_score
-
-        # dealbreakers (-50 if any match)
-        if self._has_deal_breaker_conflict(user_survey, other_survey):
-            score -= 50
-
-        return max(0, min(100, score))
-
-    @staticmethod
-    def _budgets_overlap(survey1: Survey, survey2: Survey) -> bool:
-        return not (
-            survey1.budget_max < survey2.budget_min or survey2.budget_max < survey1.budget_min
-        )
-
-    @staticmethod
-    def _compare_numeric_preference(val1: int, val2: int, tolerance: int) -> float:
-        diff = abs(val1 - val2)
-        if diff <= tolerance:
-            return 10 - (diff * 2)
-        return 0
-
-    @staticmethod
-    def _has_deal_breaker_conflict(survey1: Survey, survey2: Survey) -> bool:
-        # todo - implement deal breaker logic
-        return False
 
     async def like_user(self, user_id: str, target_user_id: str) -> Dict:
         # todo - implementation for liking a user

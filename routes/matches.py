@@ -10,6 +10,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from database import get_db
 from models.survey import Survey
 from services.matching_service import MatchingService
+from services.matching_config import sim_matrix, q_weights
 from utils.firebase_auth import get_current_user
 
 logger = logging.getLogger("meteormate." + __name__)
@@ -33,7 +34,7 @@ async def get_potential_matches(
             logger.warning(f"User {uid} attempted to fetch matches without completing survey")
             raise HTTPException(status_code=400, detail="Complete your survey first")
 
-        matching_service = MatchingService(db)
+        matching_service = MatchingService(db, sim_matrix, q_weights)
         matches = await matching_service.find_potential_matches(uid, limit)
 
         logger.info(f"User {uid} fetched {len(matches) if matches else 0} potential matches")
