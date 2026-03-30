@@ -1,7 +1,8 @@
 # Created by Ryan Polasky | 9/20/25
 # ACM MeteorMate | All Rights Reserved
 
-from sqlalchemy import ARRAY, Column, DateTime, Text, ForeignKey, func, Numeric
+import enum
+from sqlalchemy import ARRAY, Column, Text, ForeignKey, func, Numeric, Enum as SQLEnum, Boolean, text, Date, DateTime
 from sqlalchemy.dialects.postgresql import ENUM as PGEnum
 from sqlalchemy.orm import relationship
 from sqlalchemy.ext.mutable import MutableList
@@ -37,12 +38,18 @@ class UserProfile(ORMBase):
     major = Column(Text)
     classification = Column(CLASSIFICATION_ENUM)
     bio = Column(Text)
-    profile_picture_url = Column(MutableList.as_mutable(ARRAY(Text)), default=[])
+    profile_picture_url = Column(MutableList.as_mutable(ARRAY(Text)), default=list)
 
     # moved from user table
     first_name = Column(Text)
     last_name = Column(Text)
     age = Column(Numeric)
+
+    dob = Column(Date(), nullable=False)
+
+    # notification preferences
+    match_notification = Column(Boolean, server_default=text("true"), nullable=False)
+    promotional_notification = Column(Boolean, server_default=text("false"), nullable=False)
 
     # behind-the-scenes stuff
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)

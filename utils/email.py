@@ -28,7 +28,11 @@ def send_verification_email(email: str, code: str):
     msg.attach(MIMEText(html, 'html'))
 
     # send email via SMTP
-    with smtplib.SMTP_SSL(settings.SMTP_SERVER, settings.SMTP_PORT) as server:
+    with smtplib.SMTP(settings.SMTP_SERVER, settings.SMTP_PORT) as server:
+        server.ehlo()
+        server.starttls()
+        server.ehlo()
+
         server.login(settings.EMAIL_USER, settings.EMAIL_PASSWORD)
         server.sendmail(settings.EMAIL_USER, email, msg.as_string())
 
@@ -67,7 +71,7 @@ def send_inactive_notices(email: str, notice_num: int):
         msg['To'] = email
 
         # load the template using python modules with importlib
-        html = resources.files("static").joinpath("reset_password.html").read_text(
+        html = resources.files("static").joinpath("inactivity_warning.html").read_text(
             encoding="utf-8"
         ).replace("{inactivity_warning}", inactivity_warning)
 

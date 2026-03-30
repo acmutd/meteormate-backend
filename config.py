@@ -9,9 +9,7 @@ from typing import List
 class Settings:
     DATABASE_URL: str = config("DATABASE_URL")
 
-    FIREBASE_CREDENTIALS = json.loads(
-        config("FIREBASE_CREDENTIALS", default="{}")
-    )
+    FIREBASE_CREDENTIALS = json.loads(config("FIREBASE_CREDENTIALS", default="{}"))
     FIREBASE_STORAGE_BUCKET: str = config("FIREBASE_STORAGE_BUCKET", default="")
 
     ALLOWED_ORIGINS: List[str] = ["*"]  # todo - change this to meteormate.com when site is live
@@ -29,12 +27,6 @@ class Settings:
 
     # cron config (i.e. admin token for cron jobs to perform administrative duties)
     CRON_SECRET: str = config("CRON_SECRET", default="")
-
-    # admin bearer key for testing
-    ADMIN_BEARER: str = config("ADMIN_BEARER", default="")
-
-    # admin user uid for testing
-    ADMIN_UID: str = config("ADMIN_UID", default="")
 
     # validation config
     FIRST_NAME_MIN_LEN: int = 2

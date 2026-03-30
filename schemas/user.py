@@ -12,7 +12,7 @@ from schemas.user_profile import UserProfileResponse
 class UserCreate(BaseModel):
     email: str
     password: str
-    utd_id: str
+    net_id: str
 
     @field_validator("email")
     def validate_utd_email(cls, v):
@@ -45,3 +45,13 @@ class UserResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+class UserVerifyEmail(BaseModel):
+    code: str
+
+
+class UserResetPassword(BaseModel):
+    email: str
+    code: str
+    new_password: str

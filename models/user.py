@@ -5,7 +5,7 @@ import enum
 from typing import Optional, Literal
 
 from pydantic import BaseModel, EmailStr
-from sqlalchemy import Column, Boolean, DateTime, Text, func, Enum
+from sqlalchemy import Column, Boolean, DateTime, Text, func, Enum as SQLEnum
 from sqlalchemy.orm import relationship
 
 from database import ORMBase
@@ -26,13 +26,21 @@ class User(ORMBase):
 
     # behind-the-scenes stuff
     is_active = Column(Boolean, nullable=False, server_default='true', default=True)
-    pending_deletion = Column(Boolean, nullable=False, server_default='false', default=True)
+    pending_deletion = Column(Boolean, nullable=False, server_default='false', default=False)
+    is_banned = Column(Boolean, nullable=False, server_default='false', default=False)
 
     created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
     updated_at = Column(
         DateTime(timezone=True), nullable=False, server_default=func.now(), onupdate=func.now()
     )
-    inactivity_notification_stage = Column(Enum(InactivityStage), nullable=True)
+    inactivity_notification_stage = Column(
+        SQLEnum(
+            InactivityStage,
+            values_callable=lambda enum_cls: [e.value for e in enum_cls],
+            name="inactivitystage",
+        ),
+        nullable=True,
+    )
     last_inactivity_notification_sent_at = Column(DateTime, nullable=True)
 
     survey = relationship(
@@ -41,20 +49,3 @@ class User(ORMBase):
     profile = relationship(
         "UserProfile", back_populates="user", uselist=False, cascade="all, delete-orphan"
     )
-
-
-class UserRequestVerify(BaseModel):
-    email: EmailStr
-    uid: Optional[str] = None
-    purpose: Literal["verify", "reset"] = "verify"
-
-
-class UserCompleteVerify(BaseModel):
-    email: EmailStr
-    code: str
-
-
-class UserResetPassword(BaseModel):
-    email: EmailStr
-    code: str
-    new_password: str

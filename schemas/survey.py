@@ -53,7 +53,7 @@ class SurveyCreate(BaseModel):
 
     # off-campus lease branch
     have_lease: Optional[bool] = None
-    have_lease_length: HaveLeaseLengthEnum
+    have_lease_length: Optional[HaveLeaseLengthEnum] = None
 
     # catch all
     answers: Dict[str, Any] = {}

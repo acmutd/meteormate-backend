@@ -2,13 +2,16 @@
 # ACM MeteorMate | All Rights Reserved
 
 import logging
+from typing import Annotated
 from urllib.parse import unquote, urlparse
 import uuid
 
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
-from utils.exceptions import BadRequest, Conflict, NotFound
+from models.admin import Banlist
+from models.user import User
+from utils.exceptions import BadRequest, Conflict, Forbidden, NotFound
 from utils.firebase_storage import upload_profile_picture, delete_profile_picture
 
 from database import commit_or_raise, get_db
@@ -18,8 +21,9 @@ from schemas.user_profile import (
     UserProfilePicture,
     UserProfileResponse,
     UserProfileUpdate,
+    UserUpdateNotifications,
 )
-from utils.firebase_auth import get_current_user
+from utils.firebase_auth import ensure_email_verified
 
 logger = logging.getLogger("meteormate." + __name__)
 
@@ -29,19 +33,17 @@ router = APIRouter()
 @router.post("/create", response_model=UserProfileResponse)
 async def create_user_profile(
     profile_data: UserProfileCreate,
-    current_user_token=Depends(get_current_user),
-    db: Session = Depends(get_db),
+    current_user: Annotated[User, Depends(ensure_email_verified)],
+    db: Annotated[Session, Depends(get_db)],
 ):
-    uid = current_user_token.get("uid")
-
-    if db.get(UserProfile, uid):
-        logger.warning(f"profile already exists for User {uid}")
+    if current_user.profile:
+        logger.warning(f"profile already exists for User {current_user.id}")
         raise Conflict("User profile already exists")
 
-    profile = UserProfile(user_id=uid, **profile_data.model_dump())
+    profile = UserProfile(user_id=current_user.id, **profile_data.model_dump())
     db.add(profile)
 
-    commit_or_raise(db, logger, resource="user profile", uid=uid, action="create")
+    commit_or_raise(db, logger, resource="user profile", uid=current_user.id, action="create")
 
     db.refresh(profile)
     return profile
@@ -50,34 +52,37 @@ async def create_user_profile(
 @router.put("/update", response_model=UserProfileResponse)
 async def update_user_profile(
     profile_data: UserProfileUpdate,
-    current_user_token=Depends(get_current_user),
-    db: Session = Depends(get_db),
+    current_user: Annotated[User, Depends(ensure_email_verified)],
+    db: Annotated[Session, Depends(get_db)],
 ):
-    uid = current_user_token.get("uid")
-
-    profile = db.query(UserProfile).filter(UserProfile.user_id == uid).first()
+    profile = current_user.profile
 
     if not profile:
-        logger.warning(f"profile not found for User {uid}")
+        logger.warning(f"profile not found for User {current_user.id}")
         raise NotFound("User profile")
 
     update_data = profile_data.model_dump(exclude_unset=True)
     for field, value in update_data.items():
         setattr(profile, field, value)
 
-    commit_or_raise(db, logger, resource="user profile", uid=uid, action="update")
+    commit_or_raise(db, logger, resource="user profile", uid=current_user.id, action="update")
 
     db.refresh(profile)
     return profile
 
 
 @router.get("/get/{uid}", response_model=UserProfileResponse)
-async def get_user_profile(uid: str, db: Session = Depends(get_db)):
+async def get_user_profile(uid: str, db: Annotated[Session, Depends(get_db)]):
     profile = db.query(UserProfile).filter(UserProfile.user_id == uid).first()
-
     if not profile:
         logger.warning(f"profile not found for User {uid}")
         raise NotFound("User profile")
+
+    if db.query(Banlist).filter(Banlist.net_id == uid).first():
+        logger.warning(f"User with Net ID {uid} attempted to access profile but is banned")
+        raise Forbidden(
+            "This user is banned from using this service. If you believe this is a mistake, please contact support."
+        )
 
     return profile
 
@@ -85,12 +90,12 @@ async def get_user_profile(uid: str, db: Session = Depends(get_db)):
 @router.post("/upload_picture", response_model=UserProfileResponse)
 async def upload_profile_pic(
     image_data: UserProfilePicture,
-    current_user_token=Depends(get_current_user),
-    db: Session = Depends(get_db),
+    current_user: Annotated[User, Depends(ensure_email_verified)],
+    db: Annotated[Session, Depends(get_db)],
 ):
-    uid = current_user_token.get("uid")
+    profile = current_user.profile
+    uid = current_user.id
 
-    profile = db.query(UserProfile).filter(UserProfile.user_id == uid).first()
     if not profile:
         logger.warning(f"profile not found for User {uid}")
         raise NotFound("User profile")
@@ -115,12 +120,12 @@ async def upload_profile_pic(
 @router.delete("/delete_picture/{index}", response_model=UserProfileResponse)
 async def delete_profile_pic(
     index: int,
-    current_user_token=Depends(get_current_user),
-    db: Session = Depends(get_db),
+    current_user: Annotated[User, Depends(ensure_email_verified)],
+    db: Annotated[Session, Depends(get_db)],
 ):
-    uid = current_user_token.get("uid")
+    uid = current_user.id
+    profile = current_user.profile
 
-    profile = db.query(UserProfile).filter(UserProfile.user_id == uid).first()
     if not profile:
         logger.warning(f"profile not found for User {uid}")
         raise NotFound("User profile")
@@ -141,6 +146,32 @@ async def delete_profile_pic(
     profile.profile_picture_url.pop(index)
 
     commit_or_raise(db, logger, resource="user profile", uid=uid, action="delete")
+
+    db.refresh(profile)
+
+    return profile
+
+
+@router.post("/update_notifications", response_model=UserProfileResponse)
+async def update_notifications(
+    notification_updates: UserUpdateNotifications,
+    current_user: Annotated[User, Depends(ensure_email_verified)],
+    db: Annotated[Session, Depends(get_db)],
+):
+    profile = current_user.profile
+    uid = current_user.id
+
+    if not profile:
+        logger.warning(f"profile not found for User {uid}")
+        raise NotFound("User profile")
+
+    if notification_updates.match_notification is not None:
+        profile.match_notification = notification_updates.match_notification
+
+    if notification_updates.promotional_notification is not None:
+        profile.promotional_notification = notification_updates.promotional_notification
+
+    commit_or_raise(db, logger, resource="user profile", uid=uid, action="update notifications")
 
     db.refresh(profile)
 
