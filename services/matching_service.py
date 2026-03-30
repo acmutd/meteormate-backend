@@ -28,13 +28,17 @@ class MatchingService:
         if not user_survey:
             return []
 
-        # find all other users that should be filtered out
-        inactive_users = self.db.query(User.id).filter(User.is_active == False) # keep as subquery
         # filter out all the inactive users
-        other_surveys = self.db.query(Survey).filter(Survey.user_id.notin_(inactive_users), Survey.user_id != user_id).all()
-        other_profiles = self.db.query(UserProfile).filter(UserProfile.user_id.notin_(inactive_users), UserProfile.user_id != user_id).all()
+        other_surveys = self.db.query(Survey).join(User, Survey.user_id == User.id).filter(
+            User.is_active == True,
+            Survey.user_id != user_id
+        ).all()
+        other_profiles = self.db.query(UserProfile).join(User, UserProfile.user_id == User.id).filter(
+            User.is_active == True,
+            UserProfile.user_id != user_id
+        ).all()
+
         other_ids = np.array([survey.user_id for survey in other_surveys], dtype=object)
-        
         id_to_survey = {survey.user_id: survey for survey in other_surveys}
         id_to_profile = {profile.user_id: profile for profile in other_profiles}
 
