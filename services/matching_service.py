@@ -29,34 +29,39 @@ class MatchingService:
             return []
 
         # find all other users that should be filtered out
-        inactive_users = self.db.query(User).filter(User.is_active == False).all()
-        inactive_user_ids = [user.id for user in inactive_users]
-        inactive_user_ids.append(user_id)
+        inactive_users = self.db.query(User.id).filter(User.is_active == False) # keep as subquery
         # filter out all the inactive users
-        other_surveys = self.db.query(Survey).filter(Survey.user_id.notin_(set(inactive_user_ids))).all()
+        other_surveys = self.db.query(Survey).filter(Survey.user_id.notin_(inactive_users), Survey.user_id != user_id).all()
+        other_profiles = self.db.query(UserProfile).filter(UserProfile.user_id.notin_(inactive_users), UserProfile.user_id != user_id).all()
         other_ids = np.array([survey.user_id for survey in other_surveys], dtype=object)
+        
+        id_to_survey = {survey.user_id: survey for survey in other_surveys}
+        id_to_profile = {profile.user_id: profile for profile in other_profiles}
 
         # parallelize compatibility calculations for all other users 
         user_vector = np.expand_dims(np.array(list(user_survey.relevant_answers)), axis=0) # shape = (1, Q) where Q is number of survey questions
         other_vectors = np.array([list(other_survey.relevant_answers) for other_survey in other_surveys]) # shape = (N, Q) where N is number of other users (that passed the inactivity filtering)
         sim_scores = self.sim_matrix[self.q_idx, user_vector, other_vectors] # shape = (Q, C, C) where C is max number of answer choices across any question (5 in our case, at least for now)
-        average_sim_scores = np.sum(self.q_weights * sim_scores / np.sum(self.q_weights, axis=-1), axis=-1) # shape = (N, 1)
+        average_sim_scores = np.sum(self.q_weights * sim_scores, axis=-1) / np.sum(self.q_weights) # shape = (N, 1)
         sorted_other_ids = other_ids[np.argsort(average_sim_scores)[::-1]] # shape = (N, 1)
     
         sorted_records = []
         for curr_id in list(sorted_other_ids):
             # get all the relevant database schema info for each user
-            curr_user_survey_record = self.db.query(Survey).filter(Survey.user_id == curr_id).first()
-            curr_user_profile_record = self.db.query(UserProfile).filter(UserProfile.user_id == curr_id).first()
+            curr_user_survey_record = id_to_survey[curr_id]
+            curr_user_profile_record = id_to_profile[curr_id]
             
             sorted_records.append({
                 "user": {
                     "uid": curr_user_profile_record.user_id,
-                    "first_name": curr_user_profile_record.gender,
+                    "first_name": curr_user_profile_record.first_name,
+                    "last_name": curr_user_profile_record.last_name,
+                    "gender": curr_user_profile_record.gender,
                     "major": curr_user_profile_record.major,
                     "classification": curr_user_profile_record.classification,
                     "bio": curr_user_profile_record.bio
                 },
+                # In the future, may only include a portion of the survey information
                 "survey": {
                     "housing_intent": curr_user_survey_record.housing_intent,
                     "budget_min": curr_user_survey_record.budget_min,

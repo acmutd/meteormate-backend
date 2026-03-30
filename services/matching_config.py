@@ -77,28 +77,28 @@ _place(7, [
 ])
 
 # pet_preference
-_place(9, [
+_place(8, [
     [1.0, 0.9, 0.8],  # okay with pet
     [0.7, 1.0, 0.0],  # not okay with pet
     [0.7, 0.0, 0.5],   # has a pet (two people having pets may cause problems, which is why last value is 0.5 and not 1)
 ])
 
 # guest_frequency
-_place(8, [
+_place(9, [
     [1.0,  0.05, 0.35],  # never     — strong clash with "often"
     [0.05, 1.0,  0.60],  # often     — somewhat compatible with "sometimes"
     [0.35, 0.60, 1.0],   # sometimes — middle ground
 ])
 
 # roommate_closeness
-_place(9, [
+_place(10, [
     [1.0,  0.6,  0.05],  # close_friends
     [0.6,  1.0,  0.40],  # friends
     [0.05, 0.40, 1.0],   # not_close
 ])
 
 # on_campus_location 
-_place(10, [
+_place(11, [
     [1.0,  0.0,  0.0,  0.3],   # cc
     [0.0,  1.0,  0.0,  0.0],   # freshman_dorms - no compatibility with other locations since freshman are required to stay in freshman dorms
     [0.0,  0.0,  1.0,  0.0],   # northside
@@ -106,7 +106,7 @@ _place(10, [
 ])
 
 # interests
-for i in range(11, 27):
+for i in range(12, 28):
     _place(i, [
         [1.0, 0.5], # has interest
         [0.5, 0.5]  # doesn't have interest
@@ -114,19 +114,19 @@ for i in range(11, 27):
 
 
 # ── Q10 honors ──────────────────────────────────────────────────────
-_place(27, [
-    [1.0, 0.5],
-    [0.5, 1.0],
-])
-
-# ── Q11 llc_interest ────────────────────────────────────────────────
 _place(28, [
     [1.0, 0.5],
     [0.5, 1.0],
 ])
 
-# num_roommates
+# ── Q11 llc_interest ────────────────────────────────────────────────
 _place(29, [
+    [1.0, 0.5],
+    [0.5, 1.0],
+])
+
+# num_roommates
+_place(30, [
     [1.0,  0.8,  0.80, 0.80],   # no_preference
     [0.8,  1.0,  0.35, 0.1],  # one
     [0.8,  0.6, 1.0, 0.4],   # two
