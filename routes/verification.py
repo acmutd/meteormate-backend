@@ -29,10 +29,10 @@ logger = logging.getLogger("meteormate." + __name__)
 
 limiter = Limiter(Rate(1, Duration.MINUTE)) # 1 request per minute for all endpoints in this router
 rate_limit = Depends(RateLimiter(limiter))
-router = APIRouter()
+router = APIRouter(dependencies=[rate_limit])
 
 
-@router.get("/account_verification", dependencies=[rate_limit])
+@router.get("/account_verification")
 def send_account_verification_email(
     current_user: Annotated[User, Depends(get_current_user)],
     db: Annotated[Session, Depends(get_db)],
@@ -64,7 +64,7 @@ def send_account_verification_email(
         raise InternalServerError("Failed to send verification code")
 
 
-@router.post("/account_verification", dependencies=[rate_limit])
+@router.post("/account_verification")
 def account_verification(
     code_data: UserVerifyEmail,
     current_user: Annotated[User, Depends(get_current_user)],
@@ -89,7 +89,7 @@ def account_verification(
     return {"message": "Email verified successfully"}
 
 
-@router.get("/reset_password/{email}", dependencies=[rate_limit])
+@router.get("/reset_password/{email}")
 def send_reset_password_email(
     email: str,
     db: Annotated[Session, Depends(get_db)],
@@ -119,7 +119,7 @@ def send_reset_password_email(
         raise InternalServerError("Failed to send verification code")
 
 
-@router.post("/reset_password", dependencies=[rate_limit])
+@router.post("/reset_password")
 def reset_password(
     request: UserResetPassword,
     db: Annotated[Session, Depends(get_db)],
@@ -136,8 +136,8 @@ def reset_password(
     next(verify_gen)
 
     # lil troll hehe
-    # if request.new_password:
-    #     raise BadRequest("Password cannot be the same as old password")
+    if request.new_password:
+        raise BadRequest("Password cannot be the same as old password")
 
     try:
         auth.update_user(uid, password=request.new_password)
