@@ -15,12 +15,65 @@ logger = logging.getLogger("meteormate." + __name__)
 
 
 class MatchingService:
-
     def __init__(self, db, sim_matrix: np.array, question_weights: np.array):
         self.db = db
         self.sim_matrix = sim_matrix
         self.q_weights = question_weights
-        self.q_idx = np.arange(30)
+        self.q_idx = np.arange(31)
+        self.exclude_fields = {"dealbreakers", "user", "user_id"}
+
+    def get_answers_array(self, survey: Survey):
+        return [
+            getattr(survey, col.name)
+            for col in survey.__table__.columns
+            if col.name not in self.exclude_fields
+        ]
+        
+    def find_potential_matches_new(self, user_id: str, limit: int = 10) -> List[str]:
+        # current user's survey
+        user_survey = self.db.query(Survey).filter(Survey.user_id == user_id).first()
+        user_profile = self.db.query(UserProfile).filter(UserProfile.user_id == user_id).first()
+        if not user_survey or not user_profile:
+            return []
+        
+        user_answers = np.array(self.get_answers_array(user_survey))
+        
+        # get user's survey and profile of active users
+        active_user_surveys = self.db.query(Survey).join(User, Survey.user_id == User.id).filter(
+            Survey.user_id != user_id,
+            User.is_active == True
+        ).all()
+        active_user_profiles = self.db.query(UserProfile).join(User, UserProfile.user_id == User.id).filter(
+            User.id != user_id,
+            User.is_active == True
+        ).all()
+        
+        uids = np.array([survey.user_id for survey in active_user_surveys], dtype=object)
+        id_to_survey = {survey.user_id: survey for survey in active_user_surveys}
+        id_to_profile = {profile.user_id: profile for profile in active_user_profiles}
+        
+        uid_scores = {}
+        
+        for uid in uids:
+            potential_match_survey = id_to_survey[uid]
+            potential_match_profile = id_to_profile[uid]
+            
+            if "smoke_vape" in user_survey.dealbreakers and potential_match_survey.smoke_vape:
+                continue
+            if "drink" in user_survey.dealbreakers and potential_match_survey.drink:
+                continue
+            if "same_gender" in user_survey.dealbreakers and potential_match_profile.gender == user_profile.gender:
+                continue
+            
+            potential_match_answers = np.array(self.get_answers_array(potential_match_survey))
+            sim_scores = self.sim_matrix[self.q_idx, user_answers, potential_match_answers]
+            average_sim_score = np.sum(self.q_weights * sim_scores) / np.sum(self.q_weights)
+            uid_scores[uid] = average_sim_score
+
+        # Sort users by compatibility score and return the top matches
+        sorted_uids = sorted(uid_scores, key=uid_scores.get, reverse=True)
+        return sorted_uids[:limit]
+
 
     def find_potential_matches(self, user_id: str, limit: int = 10) -> List[str]:
         # get user's survey
