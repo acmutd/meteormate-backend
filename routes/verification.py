@@ -5,6 +5,8 @@ import logging
 from typing import Annotated
 
 from fastapi import APIRouter, Depends
+from pyrate_limiter import Duration, Limiter, Rate
+from fastapi_limiter.depends import RateLimiter
 from sqlalchemy.orm import Session
 from firebase_admin import auth
 from firebase_admin.exceptions import FirebaseError
@@ -25,10 +27,12 @@ from utils.verification_codes import create_verification_code, verify_code
 
 logger = logging.getLogger("meteormate." + __name__)
 
+limiter = Limiter(Rate(1, Duration.MINUTE)) # 1 request per minute for all endpoints in this router
+rate_limit = Depends(RateLimiter(limiter))
 router = APIRouter()
 
 
-@router.get("/account_verification")
+@router.get("/account_verification", dependencies=[rate_limit])
 def send_account_verification_email(
     current_user: Annotated[User, Depends(get_current_user)],
     db: Annotated[Session, Depends(get_db)],
@@ -60,7 +64,7 @@ def send_account_verification_email(
         raise InternalServerError("Failed to send verification code")
 
 
-@router.post("/account_verification")
+@router.post("/account_verification", dependencies=[rate_limit])
 def account_verification(
     code_data: UserVerifyEmail,
     current_user: Annotated[User, Depends(get_current_user)],
@@ -85,7 +89,7 @@ def account_verification(
     return {"message": "Email verified successfully"}
 
 
-@router.get("/reset_password/{email}")
+@router.get("/reset_password/{email}", dependencies=[rate_limit])
 def send_reset_password_email(
     email: str,
     db: Annotated[Session, Depends(get_db)],
@@ -115,7 +119,7 @@ def send_reset_password_email(
         raise InternalServerError("Failed to send verification code")
 
 
-@router.post("/reset_password")
+@router.post("/reset_password", dependencies=[rate_limit])
 def reset_password(
     request: UserResetPassword,
     db: Annotated[Session, Depends(get_db)],
@@ -132,8 +136,8 @@ def reset_password(
     next(verify_gen)
 
     # lil troll hehe
-    if request.new_password:
-        raise BadRequest("Password cannot be the same as old password")
+    # if request.new_password:
+    #     raise BadRequest("Password cannot be the same as old password")
 
     try:
         auth.update_user(uid, password=request.new_password)
