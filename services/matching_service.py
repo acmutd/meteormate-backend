@@ -1,4 +1,5 @@
 # Created by Ryan Polasky | 7/12/25
+# Updated by Joel Guvireddy with help from Atharva Mishra | 4/10/2026
 # ACM MeteorMate | All Rights Reserved
 
 import logging
@@ -29,123 +30,47 @@ class MatchingService:
             if col.name not in self.exclude_fields
         ]
         
-    def find_potential_matches_new(self, user_id: str, limit: int = 10) -> List[str]:
+    def find_potential_matches(self, user_id: str, limit: int = 10) -> List[User]:
         # current user's survey
-        user_survey = self.db.query(Survey).filter(Survey.user_id == user_id).first()
-        user_profile = self.db.query(UserProfile).filter(UserProfile.user_id == user_id).first()
-        if not user_survey or not user_profile:
+        current_user = self.db.query(User).filter(User.id == user_id).first()
+        if not current_user:
+            logger.warning(f"User {user_id} attempted to find matches but does not exist")
             return []
         
-        user_answers = np.array(self.get_answers_array(user_survey))
+        current_user_answers = np.array(self.get_answers_array(current_user.survey))
         
         # get user's survey and profile of active users
-        active_user_surveys = self.db.query(Survey).join(User, Survey.user_id == User.id).filter(
-            Survey.user_id != user_id,
-            User.is_active == True
-        ).all()
-        active_user_profiles = self.db.query(UserProfile).join(User, UserProfile.user_id == User.id).filter(
+        active_users = self.db.query(User).filter(
             User.id != user_id,
             User.is_active == True
         ).all()
         
-        uids = np.array([survey.user_id for survey in active_user_surveys], dtype=object)
-        id_to_survey = {survey.user_id: survey for survey in active_user_surveys}
-        id_to_profile = {profile.user_id: profile for profile in active_user_profiles}
+        uids = np.array([user.user_id for user in active_users], dtype=object)
+        uid_to_user = {user.user_id: user for user in active_users}
         
         uid_scores = {}
         
         for uid in uids:
-            potential_match_survey = id_to_survey[uid]
-            potential_match_profile = id_to_profile[uid]
+            potential_match = uid_to_user[uid]
             
-            if "smoke_vape" in user_survey.dealbreakers and potential_match_survey.smoke_vape:
+            if "smoke_vape" in current_user.survey.dealbreakers and potential_match.survey.smoke_vape:
                 continue
-            if "drink" in user_survey.dealbreakers and potential_match_survey.drink:
+            if "drink" in current_user.survey.dealbreakers and potential_match.survey.drink:
                 continue
-            if "same_gender" in user_survey.dealbreakers and potential_match_profile.gender == user_profile.gender:
+            if "same_gender" in current_user.survey.dealbreakers and potential_match.profile.gender == current_user.profile.gender:
                 continue
             
-            potential_match_answers = np.array(self.get_answers_array(potential_match_survey))
-            sim_scores = self.sim_matrix[self.q_idx, user_answers, potential_match_answers]
+            potential_match_answers = np.array(self.get_answers_array(potential_match.survey))
+            sim_scores = self.sim_matrix[self.q_idx, current_user_answers, potential_match_answers]
             average_sim_score = np.sum(self.q_weights * sim_scores) / np.sum(self.q_weights)
             uid_scores[uid] = average_sim_score
 
-        # Sort users by compatibility score and return the top matches
+        # Sort uid to users by similarity score and return top N
         sorted_uids = sorted(uid_scores, key=uid_scores.get, reverse=True)
-        return sorted_uids[:limit]
+        top_k_uids = sorted_uids[:limit]
+        top_k_matches = [uid_to_user[uid] for uid in top_k_uids]
 
-
-    def find_potential_matches(self, user_id: str, limit: int = 10) -> List[str]:
-        # get user's survey
-        user_survey = self.db.query(Survey).filter(Survey.user_id == user_id).first()
-        if not user_survey:
-            return []
-
-        # filter out all the inactive users
-        other_surveys = self.db.query(Survey).join(User, Survey.user_id == User.id).filter(
-            User.is_active == True,
-            Survey.user_id != user_id
-        ).all()
-        other_profiles = self.db.query(UserProfile).join(User, UserProfile.user_id == User.id).filter(
-            User.is_active == True,
-            UserProfile.user_id != user_id
-        ).all()
-
-        other_ids = np.array([survey.user_id for survey in other_surveys], dtype=object)
-        id_to_survey = {survey.user_id: survey for survey in other_surveys}
-        id_to_profile = {profile.user_id: profile for profile in other_profiles}
-
-        # parallelize compatibility calculations for all other users 
-        user_vector = np.expand_dims(np.array(list(user_survey.relevant_answers)), axis=0) # shape = (1, Q) where Q is number of survey questions
-        other_vectors = np.array([list(other_survey.relevant_answers) for other_survey in other_surveys]) # shape = (N, Q) where N is number of other users (that passed the inactivity filtering)
-        sim_scores = self.sim_matrix[self.q_idx, user_vector, other_vectors] # shape = (Q, C, C) where C is max number of answer choices across any question (5 in our case, at least for now)
-        average_sim_scores = np.sum(self.q_weights * sim_scores, axis=-1) / np.sum(self.q_weights) # shape = (N, 1)
-        sorted_other_ids = other_ids[np.argsort(average_sim_scores)[::-1]] # shape = (N, 1)
-    
-        sorted_records = []
-        for curr_id in list(sorted_other_ids):
-            # get all the relevant database schema info for each user
-            curr_user_survey_record = id_to_survey[curr_id]
-            curr_user_profile_record = id_to_profile[curr_id]
-            
-            sorted_records.append({
-                "user": {
-                    "uid": curr_user_profile_record.user_id,
-                    "first_name": curr_user_profile_record.first_name,
-                    "last_name": curr_user_profile_record.last_name,
-                    "gender": curr_user_profile_record.gender,
-                    "major": curr_user_profile_record.major,
-                    "classification": curr_user_profile_record.classification,
-                    "bio": curr_user_profile_record.bio
-                },
-                # In the future, may only include a portion of the survey information
-                "survey": {
-                    "housing_intent": curr_user_survey_record.housing_intent,
-                    "budget_min": curr_user_survey_record.budget_min,
-                    "budget_max": curr_user_survey_record.budget_max,
-                    "move_in_date": curr_user_survey_record.move_in_date,
-                    "wake_time": curr_user_survey_record.wake_time,
-                    "cleanliness": curr_user_survey_record.cleanliness,
-                    "noise_tolerance": curr_user_survey_record.noise_tolerance,
-                    "interests": curr_user_survey_record.interests,
-                    "dealbreakers": curr_user_survey_record.dealbreakers,
-                    "cooking_frequency": curr_user_survey_record.cooking_frequency,
-                    "pet_preference": curr_user_survey_record.pet_preference,
-                    "guests_frequency": curr_user_survey_record.guests_frequency,
-                    "roommate_closeness": curr_user_survey_record.roommate_closeness,
-                    "on_campus_locations": curr_user_survey_record.on_campus_locations,
-                    "honors": curr_user_survey_record.honors,
-                    "llc_interest": curr_user_survey_record.llc_interest,
-                    "num_roommates": curr_user_survey_record.num_roommates,
-                    "have_lease": curr_user_survey_record.have_lease,
-                    "have_lease_length": curr_user_survey_record.have_lease_length,
-                    "smoke_vape": curr_user_survey_record.smoke_vape,
-                    "drink": curr_user_survey_record.drink
-                }
-            })
-        
-        return sorted_records[:limit]
-
+        return top_k_matches
 
     async def like_user(self, user_id: str, target_user_id: str) -> Dict:
         # todo - implementation for liking a user
