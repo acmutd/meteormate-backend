@@ -7,6 +7,8 @@ from datetime import datetime, timezone
 from typing import Annotated
 
 from fastapi import APIRouter, Depends
+from pyrate_limiter import Duration, Limiter, Rate
+from fastapi_limiter.depends import RateLimiter
 from sqlalchemy.orm import Session
 from firebase_admin import auth
 from firebase_admin.exceptions import FirebaseError
@@ -24,8 +26,14 @@ logger = logging.getLogger("meteormate." + __name__)
 
 router = APIRouter()
 
+update_limiter = Limiter(Rate(1, Duration.MINUTE * 2)) # 1 request every 2 minutes for any update or create survey endpoint
+get_limiter = Limiter(Rate(10, Duration.MINUTE)) # 10 requests per minute for the get survey endpoint
 
-@router.post("/register", response_model=UserResponse)
+update_rate_limit = Depends(RateLimiter(update_limiter))
+get_rate_limit = Depends(RateLimiter(get_limiter))
+
+
+@router.post("/register", response_model=UserResponse, dependencies=[update_rate_limit])
 async def register_user(user_data: UserCreate, db: Annotated[Session, Depends(get_db)]):
     if (
         db.query(User).filter((User.utd_id == user_data.net_id)
@@ -68,7 +76,7 @@ async def register_user(user_data: UserCreate, db: Annotated[Session, Depends(ge
         raise  # re-raise the original exception
 
 
-@router.get("/me", response_model=UserResponse)
+@router.get("/me", response_model=UserResponse, dependencies=[get_rate_limit])
 async def get_current_user_profile(current_user: Annotated[User, Depends(ensure_email_verified)], ):
     logger.info(f"User {current_user.id} requested /me")
 
@@ -76,7 +84,7 @@ async def get_current_user_profile(current_user: Annotated[User, Depends(ensure_
 
 
 # more reason to hate YAPF
-@router.delete("/delete")
+@router.delete("/delete", dependencies=[update_rate_limit])
 async def delete_user_account(
     current_user: Annotated[User, Depends(ensure_email_verified)],
     db: Annotated[Session, Depends(get_db)],
@@ -121,7 +129,7 @@ async def delete_user_account(
     return {"message": "Account deleted successfully"}
 
 
-@router.get("/activity-ping")
+@router.get("/activity-ping", dependencies=[get_rate_limit])
 def activity_ping(
     current_user: Annotated[User, Depends(ensure_email_verified)],
     db: Annotated[Session, Depends(get_db)],
@@ -134,7 +142,7 @@ def activity_ping(
     return {"status": "ok"}
 
 
-@router.post("/mark-inactive")
+@router.post("/mark-inactive", dependencies=[update_rate_limit])
 def mark_inactive(
     current_user: Annotated[User, Depends(ensure_email_verified)],
     db: Annotated[Session, Depends(get_db)],

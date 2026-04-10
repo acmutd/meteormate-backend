@@ -7,6 +7,8 @@ from urllib.parse import unquote, urlparse
 import uuid
 
 from fastapi import APIRouter, Depends
+from pyrate_limiter import Duration, Limiter, Rate
+from fastapi_limiter.depends import RateLimiter
 from sqlalchemy.orm import Session
 
 from models.admin import Banlist
@@ -29,8 +31,14 @@ logger = logging.getLogger("meteormate." + __name__)
 
 router = APIRouter()
 
+update_limiter = Limiter(Rate(1, Duration.MINUTE * 2)) # 1 request every 2 minutes for any update or create profile endpoint
+get_limiter = Limiter(Rate(10, Duration.MINUTE)) # 10 requests per minute for the get profile endpoint
 
-@router.post("/create", response_model=UserProfileResponse)
+update_rate_limit = Depends(RateLimiter(update_limiter))
+get_rate_limit = Depends(RateLimiter(get_limiter))
+
+
+@router.post("/create", response_model=UserProfileResponse, dependencies=[update_rate_limit])
 async def create_user_profile(
     profile_data: UserProfileCreate,
     current_user: Annotated[User, Depends(ensure_email_verified)],
@@ -49,7 +57,7 @@ async def create_user_profile(
     return profile
 
 
-@router.put("/update", response_model=UserProfileResponse)
+@router.put("/update", response_model=UserProfileResponse, dependencies=[update_rate_limit])
 async def update_user_profile(
     profile_data: UserProfileUpdate,
     current_user: Annotated[User, Depends(ensure_email_verified)],
@@ -71,7 +79,7 @@ async def update_user_profile(
     return profile
 
 
-@router.get("/get/{uid}", response_model=UserProfileResponse)
+@router.get("/get/{uid}", response_model=UserProfileResponse, dependencies=[get_rate_limit])
 async def get_user_profile(uid: str, db: Annotated[Session, Depends(get_db)]):
     profile = db.query(UserProfile).filter(UserProfile.user_id == uid).first()
     if not profile:
@@ -87,7 +95,7 @@ async def get_user_profile(uid: str, db: Annotated[Session, Depends(get_db)]):
     return profile
 
 
-@router.post("/upload_picture", response_model=UserProfileResponse)
+@router.post("/upload_picture", response_model=UserProfileResponse, dependencies=[update_rate_limit])
 async def upload_profile_pic(
     image_data: UserProfilePicture,
     current_user: Annotated[User, Depends(ensure_email_verified)],
@@ -117,7 +125,7 @@ async def upload_profile_pic(
     return profile
 
 
-@router.delete("/delete_picture/{index}", response_model=UserProfileResponse)
+@router.delete("/delete_picture/{index}", response_model=UserProfileResponse, dependencies=[update_rate_limit])
 async def delete_profile_pic(
     index: int,
     current_user: Annotated[User, Depends(ensure_email_verified)],
@@ -152,7 +160,7 @@ async def delete_profile_pic(
     return profile
 
 
-@router.post("/update_notifications", response_model=UserProfileResponse)
+@router.post("/update_notifications", response_model=UserProfileResponse, dependencies=[update_rate_limit])
 async def update_notifications(
     notification_updates: UserUpdateNotifications,
     current_user: Annotated[User, Depends(ensure_email_verified)],
