@@ -7,8 +7,6 @@ from datetime import datetime, timezone
 from typing import Annotated
 
 from fastapi import APIRouter, Depends
-from pyrate_limiter import Duration, Limiter, Rate
-from fastapi_limiter.depends import RateLimiter
 from sqlalchemy.orm import Session
 from firebase_admin import auth
 from firebase_admin.exceptions import FirebaseError
@@ -21,16 +19,11 @@ from utils.exceptions import Conflict, Forbidden, InternalServerError
 from utils.firebase_auth import ensure_email_verified
 from utils.firebase_storage import delete_all_profile_pictures
 from schemas.user import UserCreate, UserResponse
+from utils.rate_limiters import update_rate_limit, get_rate_limit
 
 logger = logging.getLogger("meteormate." + __name__)
 
 router = APIRouter()
-
-update_limiter = Limiter(Rate(1, Duration.MINUTE * 2)) # 1 request every 2 minutes for any update or create survey endpoint
-get_limiter = Limiter(Rate(10, Duration.MINUTE)) # 10 requests per minute for the get survey endpoint
-
-update_rate_limit = Depends(RateLimiter(update_limiter))
-get_rate_limit = Depends(RateLimiter(get_limiter))
 
 
 @router.post("/register", response_model=UserResponse, dependencies=[update_rate_limit])

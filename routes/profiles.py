@@ -7,9 +7,9 @@ from urllib.parse import unquote, urlparse
 import uuid
 
 from fastapi import APIRouter, Depends
-from pyrate_limiter import Duration, Limiter, Rate
-from fastapi_limiter.depends import RateLimiter
 from sqlalchemy.orm import Session
+from urllib.parse import unquote, urlparse
+import uuid
 
 from models.admin import Banlist
 from models.user import User
@@ -26,16 +26,11 @@ from schemas.user_profile import (
     UserUpdateNotifications,
 )
 from utils.firebase_auth import ensure_email_verified
+from utils.rate_limiters import update_rate_limit, get_rate_limit
 
 logger = logging.getLogger("meteormate." + __name__)
 
 router = APIRouter()
-
-update_limiter = Limiter(Rate(1, Duration.MINUTE * 2)) # 1 request every 2 minutes for any update or create profile endpoint
-get_limiter = Limiter(Rate(10, Duration.MINUTE)) # 10 requests per minute for the get profile endpoint
-
-update_rate_limit = Depends(RateLimiter(update_limiter))
-get_rate_limit = Depends(RateLimiter(get_limiter))
 
 
 @router.post("/create", response_model=UserProfileResponse, dependencies=[update_rate_limit])
