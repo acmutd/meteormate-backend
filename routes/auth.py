@@ -122,7 +122,7 @@ async def delete_user_account(
     return {"message": "Account deleted successfully"}
 
 
-@router.get("/activity-ping", dependencies=[get_rate_limit])
+@router.get("/activity-ping")
 def activity_ping(
     current_user: Annotated[User, Depends(ensure_email_verified)],
     db: Annotated[Session, Depends(get_db)],
