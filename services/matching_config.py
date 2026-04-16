@@ -1,7 +1,7 @@
 import numpy as np
 
 
-NUM_QUESTIONS = 31
+NUM_QUESTIONS = 15
 MAX_NUM_ANSWER_CHOICES = 5
 
 sim_matrix = np.zeros((NUM_QUESTIONS, MAX_NUM_ANSWER_CHOICES, MAX_NUM_ANSWER_CHOICES))
@@ -105,28 +105,28 @@ _place(11, [
     [0.3,  0.0,  0.0,  1.0],   # uv
 ])
 
-# interests
-for i in range(12, 28):
-    _place(i, [
-        [1.0, 0.5], # has interest
-        [0.5, 0.5]  # doesn't have interest
-    ])
+# # interests
+# for i in range(12, 28):
+#     _place(i, [
+#         [1.0, 0.5], # has interest
+#         [0.5, 0.5]  # doesn't have interest
+#     ])
 
 
 # ── Q10 honors ──────────────────────────────────────────────────────
-_place(28, [
+_place(12, [
     [1.0, 0.5],
     [0.5, 1.0],
 ])
 
 # ── Q11 llc_interest ────────────────────────────────────────────────
-_place(29, [
+_place(13, [
     [1.0, 0.5],
     [0.5, 1.0],
 ])
 
 # num_roommates
-_place(30, [
+_place(14, [
     [1.0,  0.8,  0.80, 0.80],   # no_preference
     [0.8,  1.0,  0.35, 0.1],  # one
     [0.8,  0.6, 1.0, 0.4],   # two
