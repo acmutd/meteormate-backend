@@ -1,7 +1,7 @@
 import numpy as np
 
 
-NUM_QUESTIONS = 15
+NUM_QUESTIONS = 47 # 12 demographic/lifestyle questions + 32 interest questions + 3 additional questions (honors, llc_interest, num_roommates)
 MAX_NUM_ANSWER_CHOICES = 5
 
 sim_matrix = np.zeros((NUM_QUESTIONS, MAX_NUM_ANSWER_CHOICES, MAX_NUM_ANSWER_CHOICES))
@@ -22,13 +22,23 @@ _place(0, [
     [0.50,  0.50,  0.50,  0.50,  1.00],  # Other
 ])
 
-# major (majors are grouped into 5 categories)
+# # major (majors are grouped into 5 categories)
+# _place(1, [
+#     [1.00,  0.30,  0.40,  0.10,  0.15],  # STEM & Engineering
+#     [0.30,  1.00,  0.20,  0.15,  0.35],  # Business & Management
+#     [0.40,  0.20,  1.00,  0.10,  0.30],  # Life Sciences & Health
+#     [0.10,  0.15,  0.10,  1.00,  0.45],  # Humanities & Arts
+#     [0.15,  0.35,  0.30,  0.45,  1.00],  # Social Sciences & Policy
+# ])
+
+# major (grouped by school)
 _place(1, [
-    [1.00,  0.30,  0.40,  0.10,  0.15],  # STEM & Engineering
-    [0.30,  1.00,  0.20,  0.15,  0.35],  # Business & Management
-    [0.40,  0.20,  1.00,  0.10,  0.30],  # Life Sciences & Health
-    [0.10,  0.15,  0.10,  1.00,  0.45],  # Humanities & Arts
-    [0.15,  0.35,  0.30,  0.45,  1.00],  # Social Sciences & Policy
+    [1.0, 0.3, 0.3, 0.2, 0.3, 0.1],  # Bass (AHT)
+    [0.3, 1.0, 0.6, 0.5, 0.4, 0.7],  # BBS
+    [0.3, 0.6, 1.0, 0.4, 0.7, 0.4],  # EPPS
+    [0.2, 0.5, 0.4, 1.0, 0.6, 0.8],  # Jonsson (ECS)
+    [0.3, 0.4, 0.7, 0.6, 1.0, 0.4],  # Jindal (JSOM)
+    [0.1, 0.7, 0.4, 0.8, 0.4, 1.0],  # NSM
 ])
 
 # classification 
@@ -105,28 +115,28 @@ _place(11, [
     [0.3,  0.0,  0.0,  1.0],   # uv
 ])
 
-# # interests
-# for i in range(12, 28):
-#     _place(i, [
-#         [1.0, 0.5], # has interest
-#         [0.5, 0.5]  # doesn't have interest
-#     ])
+# interests (32 interests, each treated as a binary yes/no question)
+for i in range(12, 12 + 32):
+    _place(i, [
+        [1.0, 0.5], # has interest
+        [0.5, 0.5]  # doesn't have interest
+    ])
 
 
 # ── Q10 honors ──────────────────────────────────────────────────────
-_place(12, [
+_place(44, [
     [1.0, 0.5],
     [0.5, 1.0],
 ])
 
 # ── Q11 llc_interest ────────────────────────────────────────────────
-_place(13, [
+_place(45, [
     [1.0, 0.5],
     [0.5, 1.0],
 ])
 
 # num_roommates
-_place(14, [
+_place(46, [
     [1.0,  0.8,  0.80, 0.80],   # no_preference
     [0.8,  1.0,  0.35, 0.1],  # one
     [0.8,  0.6, 1.0, 0.4],   # two
