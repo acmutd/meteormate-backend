@@ -14,6 +14,7 @@ from models.survey import Survey
 from models.user import User
 from schemas.survey import SurveyCreate, SurveyResponse, SurveyUpdate
 from utils.firebase_auth import ensure_email_verified
+from utils.matching import encode_answers
 
 logger = logging.getLogger("meteormate." + __name__)
 router = APIRouter()
@@ -32,6 +33,7 @@ async def create_survey(
         raise BadRequest("Survey already exists")
 
     survey = Survey(user_id=uid, **survey_data.model_dump())
+    survey.answers = encode_answers(survey)
     db.add(survey)
 
     commit_or_raise(db, logger, resource="survey", uid=uid, action="create")
@@ -74,6 +76,8 @@ async def update_survey(
 
     for field, value in update_data.items():
         setattr(survey, field, value)
+    
+    survey.answers = encode_answers(survey)
 
     commit_or_raise(db, logger, resource="survey", uid=uid, action="update")
 
