@@ -53,6 +53,10 @@ def top_k_matches(db: Session, user_id: str, k: int = 10) -> List[User]:
 
     for uid in uids:
         potential_match = uid_to_user[uid]
+        
+        if not potential_match.survey or not potential_match.profile:
+            logger.warning(f"Potential match {uid} for user {user_id} is missing survey or profile data, skipping")
+            continue
 
         if ("smoke_vape" in current_user.survey.dealbreakers and potential_match.survey.smoke_vape):
             continue
