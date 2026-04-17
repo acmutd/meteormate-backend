@@ -119,6 +119,85 @@ POSSIBLE_INTERESTS = [
     "Badminton",
 ]
 
+MAJOR_SCHOOLS_CLASSIFICATION = {
+    "Bass": [
+        "animation-games",
+        "arts-technology-emerging-communication",
+        "art-history",
+        "history",
+        "interdisciplinary-studies",
+        "literature",
+        "philosophy",
+        "visual-performing-arts",
+    ],
+    "BBS": [
+        "child-learning-development",
+        "cognitive-science",
+        "neuroscience",
+        "psychology",
+        "speech-language-hearing",
+    ],
+    "EPPS": [
+        "criminology-criminal-justice",
+        "economics",
+        "geospatial-information-sciences",
+        "international-political-economy",
+        "political-science",
+        "public-affairs",
+        "public-policy",
+        "sociology",
+    ],
+    "ECS": [
+        "biomedical-engineering",
+        "computer-engineering",
+        "computer-science",
+        "data-science",
+        "electrical-engineering",
+        "mechanical-engineering",
+        "software-engineering",
+    ],
+    "JSOM": [
+        "accounting",
+        "business-administration",
+        "business-analytics",
+        "finance",
+        "global-business",
+        "healthcare-management",
+        "human-resource-management",
+        "information-technology-systems",
+        "marketing",
+        "supply-chain-management",
+    ],
+    "NSM": [
+        "actuarial-science",
+        "chemistry",
+        "geosciences",
+        "mathematics",
+        "physics",
+        "biochemistry",
+        "biology",
+        "molecular-biology",
+    ],
+}
+
+SCHOOL_INDEX = {
+    "Bass": 0,
+    "BBS": 1,
+    "EPPS": 2,
+    "ECS": 3,
+    "JSOM": 4,
+    "NSM": 5,
+}
+
+
+def get_major_category(major: str) -> int:
+    for school, majors in MAJOR_SCHOOLS_CLASSIFICATION.items():
+        if major in majors:
+            return SCHOOL_INDEX[school]
+
+    return -1
+
+
 def encode_answers(survey: Survey) -> list[int]:
     answers = [
         GENDER_INDEX.get(profile.gender, -1),
@@ -134,10 +213,10 @@ def encode_answers(survey: Survey) -> list[int]:
         ROOMMATE_CLOSENESS_INDEX.get(survey.roommate_closeness, -1),
         ON_CAMPUS_LOCATION_INDEX.get(profile.on_campus_location, -1),
     ]
-    
+
     for interest in POSSIBLE_INTERESTS:
         answers.append(1 if interest in survey.interests else 0)
-    
+
     answers.append(1 if survey.honors else 0)
     answers.append(1 if survey.llc_interest else 0)
     answers.append(NUM_ROOMMATES_INDEX.get(survey.num_roommates, -1))
