@@ -8,6 +8,8 @@ import uuid
 
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
+from urllib.parse import unquote, urlparse
+import uuid
 
 from models.admin import Banlist
 from models.user import User
@@ -24,13 +26,14 @@ from schemas.user_profile import (
     UserUpdateNotifications,
 )
 from utils.firebase_auth import ensure_email_verified
+from utils.rate_limiters import sensitive_updates_limiter, regular_updates_limiter, get_rate_limiter
 
 logger = logging.getLogger("meteormate." + __name__)
 
 router = APIRouter()
 
 
-@router.post("/create", response_model=UserProfileResponse)
+@router.post("/create", response_model=UserProfileResponse, dependencies=[sensitive_updates_limiter])
 async def create_user_profile(
     profile_data: UserProfileCreate,
     current_user: Annotated[User, Depends(ensure_email_verified)],
@@ -49,7 +52,7 @@ async def create_user_profile(
     return profile
 
 
-@router.put("/update", response_model=UserProfileResponse)
+@router.put("/update", response_model=UserProfileResponse, dependencies=[regular_updates_limiter])
 async def update_user_profile(
     profile_data: UserProfileUpdate,
     current_user: Annotated[User, Depends(ensure_email_verified)],
@@ -71,7 +74,7 @@ async def update_user_profile(
     return profile
 
 
-@router.get("/get/{uid}", response_model=UserProfileResponse)
+@router.get("/get/{uid}", response_model=UserProfileResponse, dependencies=[get_rate_limiter])
 async def get_user_profile(uid: str, db: Annotated[Session, Depends(get_db)]):
     profile = db.query(UserProfile).filter(UserProfile.user_id == uid).first()
     if not profile:
@@ -87,7 +90,7 @@ async def get_user_profile(uid: str, db: Annotated[Session, Depends(get_db)]):
     return profile
 
 
-@router.post("/upload_picture", response_model=UserProfileResponse)
+@router.post("/upload_picture", response_model=UserProfileResponse, dependencies=[sensitive_updates_limiter])
 async def upload_profile_pic(
     image_data: UserProfilePicture,
     current_user: Annotated[User, Depends(ensure_email_verified)],
@@ -117,7 +120,7 @@ async def upload_profile_pic(
     return profile
 
 
-@router.delete("/delete_picture/{index}", response_model=UserProfileResponse)
+@router.delete("/delete_picture/{index}", response_model=UserProfileResponse, dependencies=[regular_updates_limiter])
 async def delete_profile_pic(
     index: int,
     current_user: Annotated[User, Depends(ensure_email_verified)],
@@ -152,7 +155,7 @@ async def delete_profile_pic(
     return profile
 
 
-@router.post("/update_notifications", response_model=UserProfileResponse)
+@router.post("/update_notifications", response_model=UserProfileResponse, dependencies=[regular_updates_limiter])
 async def update_notifications(
     notification_updates: UserUpdateNotifications,
     current_user: Annotated[User, Depends(ensure_email_verified)],

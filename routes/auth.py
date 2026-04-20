@@ -19,13 +19,14 @@ from utils.exceptions import Conflict, Forbidden, InternalServerError
 from utils.firebase_auth import ensure_email_verified
 from utils.firebase_storage import delete_all_profile_pictures
 from schemas.user import UserCreate, UserResponse
+from utils.rate_limiters import sensitive_updates_limiter, get_rate_limiter
 
 logger = logging.getLogger("meteormate." + __name__)
 
 router = APIRouter()
 
 
-@router.post("/register", response_model=UserResponse)
+@router.post("/register", response_model=UserResponse, dependencies=[sensitive_updates_limiter])
 async def register_user(user_data: UserCreate, db: Annotated[Session, Depends(get_db)]):
     if (
         db.query(User).filter((User.utd_id == user_data.net_id)
@@ -68,7 +69,7 @@ async def register_user(user_data: UserCreate, db: Annotated[Session, Depends(ge
         raise  # re-raise the original exception
 
 
-@router.get("/me", response_model=UserResponse)
+@router.get("/me", response_model=UserResponse, dependencies=[get_rate_limiter])
 async def get_current_user_profile(current_user: Annotated[User, Depends(ensure_email_verified)], ):
     logger.info(f"User {current_user.id} requested /me")
 
@@ -76,7 +77,7 @@ async def get_current_user_profile(current_user: Annotated[User, Depends(ensure_
 
 
 # more reason to hate YAPF
-@router.delete("/delete")
+@router.delete("/delete", dependencies=[sensitive_updates_limiter])
 async def delete_user_account(
     current_user: Annotated[User, Depends(ensure_email_verified)],
     db: Annotated[Session, Depends(get_db)],
@@ -134,7 +135,7 @@ def activity_ping(
     return {"status": "ok"}
 
 
-@router.post("/mark-inactive")
+@router.post("/mark-inactive", dependencies=[sensitive_updates_limiter])
 def mark_inactive(
     current_user: Annotated[User, Depends(ensure_email_verified)],
     db: Annotated[Session, Depends(get_db)],

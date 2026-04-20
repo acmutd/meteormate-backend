@@ -14,12 +14,13 @@ from models.survey import Survey
 from models.user import User
 from schemas.survey import SurveyCreate, SurveyResponse, SurveyUpdate
 from utils.firebase_auth import ensure_email_verified
+from utils.matching import encode_answers
+from utils.rate_limiters import sensitive_updates_limiter, regular_updates_limiter, get_rate_limiter
 
 logger = logging.getLogger("meteormate." + __name__)
 router = APIRouter()
 
-
-@router.post("", response_model=SurveyResponse)
+@router.post("", response_model=SurveyResponse, dependencies=[sensitive_updates_limiter])
 async def create_survey(
     survey_data: SurveyCreate,
     current_user: Annotated[User, Depends(ensure_email_verified)],
@@ -32,6 +33,7 @@ async def create_survey(
         raise BadRequest("Survey already exists")
 
     survey = Survey(user_id=uid, **survey_data.model_dump())
+    survey.answers = encode_answers(survey)
     db.add(survey)
 
     commit_or_raise(db, logger, resource="survey", uid=uid, action="create")
@@ -41,7 +43,7 @@ async def create_survey(
     return survey
 
 
-@router.get("/me", response_model=SurveyResponse)
+@router.get("/me", response_model=SurveyResponse, dependencies=[get_rate_limiter])
 async def get_my_survey(current_user: Annotated[User, Depends(ensure_email_verified)]):
     uid = current_user.id
 
@@ -53,7 +55,7 @@ async def get_my_survey(current_user: Annotated[User, Depends(ensure_email_verif
     return current_user.survey
 
 
-@router.put("", response_model=SurveyResponse)
+@router.put("", response_model=SurveyResponse, dependencies=[regular_updates_limiter])
 async def update_survey(
     survey_data: SurveyUpdate,
     current_user: Annotated[User, Depends(ensure_email_verified)],
@@ -74,6 +76,8 @@ async def update_survey(
 
     for field, value in update_data.items():
         setattr(survey, field, value)
+    
+    survey.answers = encode_answers(survey)
 
     commit_or_raise(db, logger, resource="survey", uid=uid, action="update")
 
