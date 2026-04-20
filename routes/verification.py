@@ -5,6 +5,8 @@ import logging
 from typing import Annotated
 
 from fastapi import APIRouter, Depends
+from pyrate_limiter import Duration, Limiter, Rate
+from fastapi_limiter.depends import RateLimiter
 from sqlalchemy.orm import Session
 from firebase_admin import auth
 from firebase_admin.exceptions import FirebaseError
@@ -25,7 +27,9 @@ from utils.verification_codes import create_verification_code, verify_code
 
 logger = logging.getLogger("meteormate." + __name__)
 
-router = APIRouter()
+limiter = Limiter(Rate(1, Duration.MINUTE)) # 1 request per minute for all endpoints in this router
+rate_limit = Depends(RateLimiter(limiter))
+router = APIRouter(dependencies=[rate_limit])
 
 
 @router.get("/account_verification")
