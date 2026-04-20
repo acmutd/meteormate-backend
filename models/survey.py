@@ -176,6 +176,8 @@ class Survey(ORMBase):
         nullable=False,
         server_default=text("'{}'::jsonb"),
     )
+    
+    encoded_answers = Column(ARRAY(Integer), nullable=False, server_default="{}")
 
     created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
     updated_at = Column(
