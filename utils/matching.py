@@ -1,3 +1,5 @@
+from models.survey import Survey
+
 GENDER_INDEX = {
     "female": 0,
     "male": 1,

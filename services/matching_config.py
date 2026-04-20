@@ -2,7 +2,7 @@ import numpy as np
 
 
 NUM_QUESTIONS = 47 # 12 demographic/lifestyle questions + 32 interest questions + 3 additional questions (honors, llc_interest, num_roommates)
-MAX_NUM_ANSWER_CHOICES = 5
+MAX_NUM_ANSWER_CHOICES = 6
 
 sim_matrix = np.zeros((NUM_QUESTIONS, MAX_NUM_ANSWER_CHOICES, MAX_NUM_ANSWER_CHOICES))
 q_weights = np.ones((1, NUM_QUESTIONS)) # for now, all questions are weighted equally
