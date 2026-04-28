@@ -4,7 +4,7 @@
 from datetime import datetime, date
 from typing import Optional, List, Dict, Any
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from models.survey import (
     HousingIntentEnum,
@@ -36,8 +36,8 @@ class SurveyCreate(BaseModel):
     noise_tolerance: Optional[NoiseToleranceEnum] = None
 
     # interests + dealbreakers
-    interests: List[str] = []
-    dealbreakers: List[DealbreakerEnum] = []
+    interests: List[str] = Field(default_factory=list)
+    dealbreakers: List[DealbreakerEnum] = Field(default_factory=list)
 
     # lifestyle personality
     cooking_frequency: Optional[CookingFrequencyEnum] = None
@@ -46,7 +46,7 @@ class SurveyCreate(BaseModel):
     roommate_closeness: Optional[RoommateClosenessEnum] = None
 
     # on-campus
-    on_campus_locations: List[OnCampusLocationEnum] = []
+    on_campus_locations: List[OnCampusLocationEnum] = Field(default_factory=list)
     honors: Optional[bool] = None
     llc_interest: Optional[bool] = None
     num_roommates: Optional[NumRoommatesEnum] = None
@@ -56,7 +56,7 @@ class SurveyCreate(BaseModel):
     have_lease_length: Optional[HaveLeaseLengthEnum] = None
 
     # catch all
-    answers: Dict[str, Any] = {}
+    answers: Dict[str, Any] = Field(default_factory=dict)
 
     # smoking/vaping/drinking
     smoke_vape: bool = False
@@ -121,8 +121,8 @@ class SurveyResponse(BaseModel):
     noise_tolerance: Optional[NoiseToleranceEnum] = None
 
     # interests + dealbreakers
-    interests: List[str] = []
-    dealbreakers: List[DealbreakerEnum] = []
+    interests: List[str] = Field(default_factory=list)
+    dealbreakers: List[DealbreakerEnum] = Field(default_factory=list)
 
     # lifestyle personality
     cooking_frequency: Optional[CookingFrequencyEnum] = None
@@ -131,7 +131,7 @@ class SurveyResponse(BaseModel):
     roommate_closeness: Optional[RoommateClosenessEnum] = None
 
     # on-campus
-    on_campus_locations: List[OnCampusLocationEnum] = []
+    on_campus_locations: List[OnCampusLocationEnum] = Field(default_factory=list)
     honors: Optional[bool] = None
     llc_interest: Optional[bool] = None
     num_roommates: Optional[NumRoommatesEnum] = None
@@ -141,7 +141,7 @@ class SurveyResponse(BaseModel):
     have_lease_length: HaveLeaseLengthEnum
 
     # catch all
-    answers: Dict[str, Any] = {}
+    answers: Dict[str, Any] = Field(default_factory=dict)
 
     created_at: datetime
     updated_at: datetime

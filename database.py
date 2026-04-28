@@ -62,7 +62,7 @@ def commit_or_raise(
         InternalServerError: For any other unexpected database errors.
     '''
     if uid == "":
-        uid = "annonymous"
+        uid = "anonymous"
 
     try:
         db.commit()
