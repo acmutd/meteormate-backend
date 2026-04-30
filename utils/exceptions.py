@@ -53,13 +53,6 @@ class Unauthorized(AppException):
         super().__init__(detail)
 
 
-class BadRequest(AppException):
-    status_code = 400
-
-    def __init__(self, detail: str = "Bad Request"):
-        super().__init__(detail)
-
-
 class InternalServerError(AppException):
     status_code = 500
 

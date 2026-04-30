@@ -3,13 +3,12 @@
 # ACM MeteorMate | All Rights Reserved
 
 import logging
+from typing import List
+
 import numpy as np
-from typing import List, Dict
 
 from sqlalchemy.orm import Session
 from models.user import User
-from models.user_profile import UserProfile
-from models.survey import Survey
 from models.matches import Match
 from services.matching_config import sim_matrix, q_weights
 
@@ -31,12 +30,12 @@ def top_k_matches(db: Session, user_id: str, k: int = 10) -> List[User]:
     active_users = (
         db.query(User).filter(
             User.id != user_id,
-            User.is_active == True,
+            User.is_active.is_(True),
             User.id.notin_(already_matched_subquery),
         ).all()
     )
 
-    if len(active_users) == 0:
+    if not active_users:
         logger.info(f"No potential matches found for user {user_id}")
         return []
 
@@ -44,8 +43,8 @@ def top_k_matches(db: Session, user_id: str, k: int = 10) -> List[User]:
         f"User {user_id} has {len(active_users)} potential matches after filtering out inactive users and already matched users"
     )
 
-    uids = np.array([user.user_id for user in active_users], dtype=object)
-    uid_to_user = {user.user_id: user for user in active_users}
+    uids = np.array([user.id for user in active_users], dtype=object)
+    uid_to_user = {user.id: user for user in active_users}
 
     uid_scores = {}
 
@@ -53,14 +52,16 @@ def top_k_matches(db: Session, user_id: str, k: int = 10) -> List[User]:
 
     for uid in uids:
         potential_match = uid_to_user[uid]
-        
+
         if not potential_match.survey or not potential_match.profile:
-            logger.warning(f"Potential match {uid} for user {user_id} is missing survey or profile data, skipping")
+            logger.warning(
+                f"Potential match {uid} for user {user_id} is missing survey or profile data, skipping"
+            )
             continue
 
-        if ("smoke_vape" in current_user.survey.dealbreakers and potential_match.survey.smoke_vape):
+        if "smoke_vape" in current_user.survey.dealbreakers and potential_match.survey.smoke_vape:
             continue
-        if ("drink" in current_user.survey.dealbreakers and potential_match.survey.drink):
+        if "drink" in current_user.survey.dealbreakers and potential_match.survey.drink:
             continue
         if (
             "same_gender" in current_user.survey.dealbreakers
