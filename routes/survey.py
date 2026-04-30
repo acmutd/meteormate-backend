@@ -70,10 +70,6 @@ async def update_survey(
         raise NotFound("Survey")
 
     update_data = survey_data.model_dump(exclude_unset=True)
-    if "answers" in update_data and update_data["answers"] is not None:
-        current_answers = survey.answers or {}
-        survey.answers = {**current_answers, **update_data["answers"]}
-        update_data.pop("answers")
 
     for field, value in update_data.items():
         setattr(survey, field, value)

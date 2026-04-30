@@ -55,9 +55,6 @@ class SurveyCreate(BaseModel):
     have_lease: Optional[bool] = None
     have_lease_length: Optional[HaveLeaseLengthEnum] = None
 
-    # catch all
-    answers: Dict[str, Any] = Field(default_factory=dict)
-
     # smoking/vaping/drinking
     smoke_vape: bool = False
     drink: bool = False
@@ -95,9 +92,6 @@ class SurveyUpdate(BaseModel):
     # off-campus lease branch
     have_lease: Optional[bool] = None
     have_lease_length: Optional[HaveLeaseLengthEnum] = None
-
-    # catch all
-    answers: Optional[Dict[str, Any]] = None
 
     # smoking/vaping/drinking
     smoke_vape: bool = False
@@ -138,10 +132,7 @@ class SurveyResponse(BaseModel):
 
     # off-campus
     have_lease: Optional[bool] = None
-    have_lease_length: HaveLeaseLengthEnum
-
-    # catch all
-    answers: Dict[str, Any] = Field(default_factory=dict)
+    have_lease_length: Optional[HaveLeaseLengthEnum] = None
 
     created_at: datetime
     updated_at: datetime
