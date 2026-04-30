@@ -20,6 +20,7 @@ from utils.rate_limiters import sensitive_updates_limiter, regular_updates_limit
 logger = logging.getLogger("meteormate." + __name__)
 router = APIRouter()
 
+
 @router.post("", response_model=SurveyResponse, dependencies=[sensitive_updates_limiter])
 async def create_survey(
     survey_data: SurveyCreate,
@@ -33,7 +34,7 @@ async def create_survey(
         raise BadRequest("Survey already exists")
 
     survey = Survey(user_id=uid, **survey_data.model_dump())
-    survey.answers = encode_answers(survey)
+    survey.encoded_answers = encode_answers(survey, current_user)
     db.add(survey)
 
     commit_or_raise(db, logger, resource="survey", uid=uid, action="create")
@@ -76,8 +77,8 @@ async def update_survey(
 
     for field, value in update_data.items():
         setattr(survey, field, value)
-    
-    survey.answers = encode_answers(survey)
+
+    survey.encoded_answers = encode_answers(survey, current_user)
 
     commit_or_raise(db, logger, resource="survey", uid=uid, action="update")
 
