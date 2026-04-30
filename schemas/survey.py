@@ -135,7 +135,6 @@ class SurveyResponse(BaseModel):
     honors: Optional[bool] = None
     llc_interest: Optional[bool] = None
     num_roommates: Optional[NumRoommatesEnum] = None
-    encoded_answers: List[int] = []
 
     # off-campus
     have_lease: Optional[bool] = None
