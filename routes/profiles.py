@@ -112,10 +112,6 @@ async def delete_profile_pics(
         raise NotFound("User profile")
 
     for url in pictures_to_delete.profile_picture_url:
-        if url not in profile.profile_picture_url:
-            logger.warning(f"User {uid} attempted to delete a picture that is not in their profile")
-            raise BadRequest("One or more provided picture URLs are not in the user's profile")
-
         # this basically parses the url to recognize any params with '?' and any url encodings
         parsed_url = urlparse(url)
         url_path = unquote(parsed_url.path)  # get only the path
@@ -125,7 +121,8 @@ async def delete_profile_pics(
         delete_profile_picture(f"profile_pictures/{uid}/{file_name}")
 
         # Remove the picture URL from the list
-        profile.profile_picture_url.remove(url)
+        if url in profile.profile_picture_url:
+            profile.profile_picture_url.remove(url)
 
     commit_or_raise(db, logger, resource="user profile", uid=uid, action="delete pictures")
 
