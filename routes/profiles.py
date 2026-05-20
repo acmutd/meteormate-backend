@@ -110,7 +110,7 @@ async def delete_profile_pics(
     if not profile:
         logger.warning(f"profile not found for User {uid}")
         raise NotFound("User profile")
-
+    
     for url in pictures_to_delete.profile_picture_url:
         # this basically parses the url to recognize any params with '?' and any url encodings
         parsed_url = urlparse(url)
@@ -122,7 +122,9 @@ async def delete_profile_pics(
 
         # Remove the picture URL from the list
         if url in profile.profile_picture_url:
-            profile.profile_picture_url.remove(url)
+            for i in range(len(profile.profile_picture_url)):
+                if profile.profile_picture_url[i] == url:
+                    profile.profile_picture_url[i] = "" # set to empty string instead of removing to maintain list length of 5
 
     commit_or_raise(db, logger, resource="user profile", uid=uid, action="delete pictures")
 
