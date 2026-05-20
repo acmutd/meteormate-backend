@@ -129,8 +129,6 @@ class UserProfileDeletePictures(BaseModel):
     def validate_picture_count(cls, v):
         if len(v) == 0:
             raise BadRequest("At least one profile picture must be provided for deletion")
-        if len(v) > 5:
-            raise BadRequest("No more than 5 profile pictures can be deleted at once")
 
         return v
 
