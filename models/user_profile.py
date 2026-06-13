@@ -28,6 +28,17 @@ CLASSIFICATION_ENUM = PGEnum(
     create_type=True
 )
 
+SCHOOL_ENUM = PGEnum(
+    'AHT',
+    'BBS',
+    'EPPS',
+    'ECS',
+    'IDS',
+    'JSOM',
+    'NSM',
+    name='school_enum',
+    create_type=True
+)
 
 class UserProfile(ORMBase):
     __tablename__ = "user_profiles"
@@ -36,6 +47,7 @@ class UserProfile(ORMBase):
 
     gender = Column(GENDER_ENUM)
     major = Column(Text)
+    school = Column(SCHOOL_ENUM)
     classification = Column(CLASSIFICATION_ENUM)
     bio = Column(Text)
     profile_picture_url = Column(MutableList.as_mutable(ARRAY(Text)), default=list)
