@@ -27,5 +27,18 @@ async def report_user(
 
     if not report_data.screenshots:
         logger.warning(f"User {current_user.id} submitted a report without screenshots")
-        
+        raise BadRequest("At least one screenshot is required to submit a report")
     
+    new_report = UserReport(
+        id=f"{current_user.id}_{report_data.reportee_uid}_{int(db.query(UserReport).count())}",
+        reporter_uid=current_user.id,
+        reported_uid=report_data.reportee_uid,
+        description=report_data.description,
+        screenshots=report_data.screenshots
+    )
+    
+    db.add(new_report)
+    db.commit()
+    
+    logger.info(f"User {current_user.id} reported user {report_data.reportee_uid}")
+    return {"message": "Report submitted successfully"}
