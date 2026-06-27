@@ -6,7 +6,7 @@ import logging
 from datetime import datetime, timezone
 from typing import Annotated
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from firebase_admin import auth
 from firebase_admin.exceptions import FirebaseError
@@ -72,6 +72,16 @@ async def register_user(user_data: UserCreate, db: Annotated[Session, Depends(ge
 @router.get("/me", response_model=UserResponse, dependencies=[get_rate_limiter])
 async def get_current_user_profile(current_user: Annotated[User, Depends(ensure_email_verified)], ):
     logger.info(f"User {current_user.id} requested /me")
+
+    if current_user.profile is not None and current_user.profile.school is None:
+        logger.info(f"User {current_user.id} needs to select a school")
+        raise HTTPException(
+            status_code=428,
+            detail={
+                "code": "SCHOOL_REQUIRED",
+                "message": "School selection is required to complete your profile",
+            },
+        )
 
     return current_user
 
