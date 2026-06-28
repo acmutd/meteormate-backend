@@ -1,4 +1,5 @@
 import logging
+import uuid
 from typing import Annotated
 
 from fastapi import APIRouter, Depends
@@ -33,7 +34,7 @@ async def report_user(
         raise BadRequest("You can submit a maximum of 5 screenshots per report")
 
     new_report = UserReport(
-        id=f"{current_user.id}_{report_data.reportee_uid}_{int(db.query(UserReport).count())}",
+        id=f"{current_user.id}_{report_data.reportee_uid}_{uuid.uuid4()}",
         reporter_uid=current_user.id,
         reported_uid=report_data.reportee_uid,
         description=report_data.description,
