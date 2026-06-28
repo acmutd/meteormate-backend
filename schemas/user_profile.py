@@ -13,6 +13,7 @@ from utils.exceptions import BadRequest, UnprocessableEntity
 
 Gender = Literal["female", "male", "non_binary", "prefer_not_to_say", "other"]
 Classification = Literal["freshman", "sophomore", "junior", "senior", "graduate"]
+School = Literal["AHT", "BBS", "EPPS", "ECS", "IDS", "JSOM", "NSM"]
 
 
 def validate_name(name: str, min_len: int, max_len: int, position: str) -> str:
@@ -32,6 +33,7 @@ def validate_name(name: str, min_len: int, max_len: int, position: str) -> str:
 class UserProfileBase(BaseModel):
     gender: Optional[Gender] = None
     major: Optional[str] = None
+    school: Optional[School] = None
     classification: Optional[Classification] = None
     bio: Optional[str] = None
     profile_picture_url: Optional[List[str]] = None
@@ -101,6 +103,7 @@ class UserProfileBase(BaseModel):
 
 class UserProfileCreate(UserProfileBase):
     gender: Gender
+    school: School
     major: str
     classification: Classification
     profile_picture_url: list[str]
@@ -117,6 +120,7 @@ class UserProfileUpdate(UserProfileBase):
 class UserProfileResponse(BaseModel):
     user_id: str
     gender: Gender
+    school: School
     major: str
     classification: Classification
     created_at: datetime

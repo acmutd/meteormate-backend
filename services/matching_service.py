@@ -3,13 +3,12 @@
 # ACM MeteorMate | All Rights Reserved
 
 import logging
+from typing import List
+
 import numpy as np
-from typing import List, Dict
 
 from sqlalchemy.orm import Session
 from models.user import User
-from models.user_profile import UserProfile
-from models.survey import Survey
 from models.matches import Match
 from services.matching_config import sim_matrix, q_weights
 
@@ -31,7 +30,7 @@ def top_k_matches(db: Session, user_id: str, k: int = 10) -> List[User]:
     active_users = (
         db.query(User).filter(
             User.id != user_id,
-            User.is_active == True,
+            User.is_active.is_(True),
             User.id.notin_(already_matched_subquery),
             # make sure all candidates have completed survey and profile
             User.survey.has(), 

@@ -22,9 +22,12 @@ def create_app() -> FastAPI:
     logger = logging.getLogger("meteormate")
     logger.setLevel(logging.DEBUG if settings.DEBUG else logging.INFO)
 
-    handler = logging.StreamHandler(sys.stdout)
-    handler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
-    logger.addHandler(handler)
+    if not logger.handlers:
+        handler = logging.StreamHandler(sys.stdout)
+        handler.setFormatter(
+            logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+        )
+        logger.addHandler(handler)
 
     # Middleware
     app.add_middleware(
