@@ -29,6 +29,9 @@ async def report_user(
         logger.warning(f"User {current_user.id} submitted a report without screenshots")
         raise BadRequest("At least one screenshot is required to submit a report")
     
+    if len(report_data.screenshots) > 5:
+        raise BadRequest("You can submit a maximum of 5 screenshots per report")
+
     new_report = UserReport(
         id=f"{current_user.id}_{report_data.reportee_uid}_{int(db.query(UserReport).count())}",
         reporter_uid=current_user.id,
