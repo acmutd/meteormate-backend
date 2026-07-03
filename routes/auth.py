@@ -70,7 +70,7 @@ async def register_user(user_data: UserCreate, db: Annotated[Session, Depends(ge
 
 
 @router.get("/me", response_model=UserResponse, dependencies=[get_rate_limiter])
-async def get_current_user_profile(current_user: Annotated[User, Depends(ensure_email_verified)], ):
+async def get_current_user_profile(current_user: Annotated[User, Depends(ensure_email_verified)]):
     logger.info(f"User {current_user.id} requested /me")
 
     return current_user
