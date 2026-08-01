@@ -117,11 +117,11 @@ async def delete_profile_pics(
         url_path = unquote(parsed_url.path)  # get only the path
         file_name = url_path.split("/")[-1]
 
-        # firebase storage helper don't confuse with endpoint function (also don't catch exceptions from this)
-        delete_profile_picture(f"profile_pictures/{uid}/{file_name}")
-
         # Remove the picture URL from the list
         if url in profile.profile_picture_url:
+            # firebase storage helper don't confuse with endpoint function (also don't catch exceptions from this)
+            delete_profile_picture(f"profile_pictures/{uid}/{file_name}")
+            
             for i in range(len(profile.profile_picture_url)):
                 if profile.profile_picture_url[i] == url:
                     profile.profile_picture_url[i] = "" # set to empty string instead of removing to maintain list length of 5
