@@ -1,10 +1,8 @@
-from typing import Optional
-
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 
 class UserReportCreate(BaseModel):
     reportee_uid: str
     description: str
-    screenshots: Optional[list[str]] = None
+    screenshots: list[str] = Field(default_factory=list)

@@ -10,7 +10,7 @@ class UserReport(ORMBase):
 
     id = Column(Text, primary_key=True, index=True)
     reporter_uid = Column(Text, ForeignKey("users.id"), nullable=False)
-    reported_uid = Column(Text, ForeignKey("users.id"), nullable=False)
+    reportee_uid = Column(Text, ForeignKey("users.id"), nullable=False)
     
     description = Column(Text, nullable=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
