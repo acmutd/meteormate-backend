@@ -4,36 +4,30 @@
 import logging
 from typing import Annotated
 from urllib.parse import unquote, urlparse
-import uuid
 
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
-from urllib.parse import unquote, urlparse
-import uuid
-
-from models.admin import Banlist
-from models.user import User
-from utils.exceptions import BadRequest, Conflict, Forbidden, NotFound
-from utils.firebase_storage import upload_profile_picture, delete_profile_picture
 
 from database import commit_or_raise, get_db
+from models.admin import Banlist
+from models.user import User
 from models.user_profile import UserProfile
-from schemas.user_profile import (
-    UserProfileCreate,
-    UserProfilePicture,
-    UserProfileResponse,
-    UserProfileUpdate,
-    UserUpdateNotifications,
-)
+from schemas.user_profile import UserProfileCreate, UserProfileDeletePictures, UserProfileResponse, UserProfileUpdate, UserUpdateNotifications
+from utils.exceptions import BadRequest, Conflict, Forbidden, NotFound
 from utils.firebase_auth import ensure_email_verified
-from utils.rate_limiters import sensitive_updates_limiter, regular_updates_limiter, get_rate_limiter
+from utils.firebase_storage import delete_profile_picture
+from utils.rate_limiters import get_rate_limiter, regular_updates_limiter, sensitive_updates_limiter
 
 logger = logging.getLogger("meteormate." + __name__)
 
 router = APIRouter()
 
 
-@router.post("/create", response_model=UserProfileResponse, dependencies=[sensitive_updates_limiter])
+@router.post(
+    "/create",
+    response_model=UserProfileResponse,
+    dependencies=[sensitive_updates_limiter],
+)
 async def create_user_profile(
     profile_data: UserProfileCreate,
     current_user: Annotated[User, Depends(ensure_email_verified)],
@@ -42,6 +36,10 @@ async def create_user_profile(
     if current_user.profile:
         logger.warning(f"profile already exists for User {current_user.id}")
         raise Conflict("User profile already exists")
+
+    if len(profile_data.profile_picture_url) != 5:
+        logger.warning(f"User {current_user.id} attempted to upload an incorrect number of profile pictures")
+        raise BadRequest("Exactly 5 profile pictures must be uploaded")
 
     profile = UserProfile(user_id=current_user.id, **profile_data.model_dump())
     db.add(profile)
@@ -52,7 +50,11 @@ async def create_user_profile(
     return profile
 
 
-@router.put("/update", response_model=UserProfileResponse, dependencies=[regular_updates_limiter])
+@router.put(
+    "/update",
+    response_model=UserProfileResponse,
+    dependencies=[regular_updates_limiter],
+)
 async def update_user_profile(
     profile_data: UserProfileUpdate,
     current_user: Annotated[User, Depends(ensure_email_verified)],
@@ -63,6 +65,10 @@ async def update_user_profile(
     if not profile:
         logger.warning(f"profile not found for User {current_user.id}")
         raise NotFound("User profile")
+
+    if profile_data.profile_picture_url is not None and len(profile_data.profile_picture_url) != 5:
+        logger.warning(f"User {current_user.id} attempted to upload an incorrect number of profile pictures")
+        raise BadRequest("Exactly 5 profile pictures must be uploaded")
 
     update_data = profile_data.model_dump(exclude_unset=True)
     for field, value in update_data.items():
@@ -83,46 +89,18 @@ async def get_user_profile(uid: str, db: Annotated[Session, Depends(get_db)]):
 
     if db.query(Banlist).filter(Banlist.net_id == uid).first():
         logger.warning(f"User with Net ID {uid} attempted to access profile but is banned")
-        raise Forbidden(
-            "This user is banned from using this service. If you believe this is a mistake, please contact support."
-        )
+        raise Forbidden("This user is banned from using this service. If you believe this is a mistake, please contact support.")
 
     return profile
 
 
-@router.post("/upload_picture", response_model=UserProfileResponse, dependencies=[sensitive_updates_limiter])
-async def upload_profile_pic(
-    image_data: UserProfilePicture,
-    current_user: Annotated[User, Depends(ensure_email_verified)],
-    db: Annotated[Session, Depends(get_db)],
-):
-    profile = current_user.profile
-    uid = current_user.id
-
-    if not profile:
-        logger.warning(f"profile not found for User {uid}")
-        raise NotFound("User profile")
-
-    if profile.profile_picture_url is None:
-        profile.profile_picture_url = []
-
-    img_id = str(uuid.uuid4())
-    blob_path = f"profile_pictures/{uid}/{img_id}.webp"
-
-    # raises http exceptions do not catch
-    profile_pic_url = upload_profile_picture(image_data.image_bytes, blob_path)
-    profile.profile_picture_url.append(profile_pic_url)
-
-    commit_or_raise(db, logger, resource="user profile", uid=uid, action="upload")
-
-    db.refresh(profile)
-
-    return profile
-
-
-@router.delete("/delete_picture/{index}", response_model=UserProfileResponse, dependencies=[regular_updates_limiter])
-async def delete_profile_pic(
-    index: int,
+@router.delete(
+    "/delete_pictures",
+    response_model=UserProfileResponse,
+    dependencies=[regular_updates_limiter],
+)
+async def delete_profile_pics(
+    pictures_to_delete: UserProfileDeletePictures,
     current_user: Annotated[User, Depends(ensure_email_verified)],
     db: Annotated[Session, Depends(get_db)],
 ):
@@ -132,30 +110,34 @@ async def delete_profile_pic(
     if not profile:
         logger.warning(f"profile not found for User {uid}")
         raise NotFound("User profile")
+    
+    for url in pictures_to_delete.profile_picture_url:
+        # this basically parses the url to recognize any params with '?' and any url encodings
+        parsed_url = urlparse(url)
+        url_path = unquote(parsed_url.path)  # get only the path
+        file_name = url_path.split("/")[-1]
 
-    if index < 0 or index >= len(profile.profile_picture_url):
-        logger.warning(f"invalid picture index {index} for User {uid}")
-        raise BadRequest("Index out-of-bounds for profile pictures")  # kinda funny ngl
+        # Remove the picture URL from the list
+        if url in profile.profile_picture_url:
+            # firebase storage helper don't confuse with endpoint function (also don't catch exceptions from this)
+            delete_profile_picture(f"profile_pictures/{uid}/{file_name}")
+            
+            for i in range(len(profile.profile_picture_url)):
+                if profile.profile_picture_url[i] == url:
+                    profile.profile_picture_url[i] = "" # set to empty string instead of removing to maintain list length of 5
 
-    # this basically parses the url to recognize any params with '?' and any url encodings
-    parsed_url = urlparse(profile.profile_picture_url[index])
-    url_path = unquote(parsed_url.path)  # get only the path
-    file_name = url_path.split("/")[-1]
-
-    # firebase storage helper don't confuse with endpoint function (also don't catch exceptions from this)
-    delete_profile_picture(f"profile_pictures/{uid}/{file_name}")
-
-    # Remove the picture URL from the list
-    profile.profile_picture_url.pop(index)
-
-    commit_or_raise(db, logger, resource="user profile", uid=uid, action="delete")
+    commit_or_raise(db, logger, resource="user profile", uid=uid, action="delete pictures")
 
     db.refresh(profile)
 
     return profile
 
 
-@router.post("/update_notifications", response_model=UserProfileResponse, dependencies=[regular_updates_limiter])
+@router.post(
+    "/update_notifications",
+    response_model=UserProfileResponse,
+    dependencies=[regular_updates_limiter],
+)
 async def update_notifications(
     notification_updates: UserUpdateNotifications,
     current_user: Annotated[User, Depends(ensure_email_verified)],
