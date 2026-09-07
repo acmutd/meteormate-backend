@@ -28,7 +28,7 @@ async def get_potential_matches(
     db: Annotated[Session, Depends(get_db)],
     limit: int = 10,
 ):
-    if not current_user.survey or not current_user.survey.answers:
+    if not current_user.survey or not current_user.survey.encoded_answers:
         logger.warning(f"User {current_user.id} requested matches without a completed survey")
         raise Forbidden("Complete your survey to see potential matches")
 

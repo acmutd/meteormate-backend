@@ -170,13 +170,6 @@ class Survey(ORMBase):
         mm_enum(HaveLeaseLengthEnum, "have_lease_length_enum"), nullable=True
     )
 
-    # Catch-all
-    answers = Column(
-        JSONB,
-        nullable=False,
-        server_default=text("'{}'::jsonb"),
-    )
-    
     encoded_answers = Column(ARRAY(Integer), nullable=False, server_default="{}")
 
     created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())

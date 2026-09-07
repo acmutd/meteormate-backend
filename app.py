@@ -12,7 +12,7 @@ from fastapi.responses import JSONResponse, RedirectResponse
 
 from config import settings
 from utils.exceptions import AppException
-from routes import auth, survey, matches, cron, profiles, admin, verification
+from routes import auth, survey, matches, cron, profiles, admin, verification, user_reports
 
 
 def create_app() -> FastAPI:
@@ -22,9 +22,12 @@ def create_app() -> FastAPI:
     logger = logging.getLogger("meteormate")
     logger.setLevel(logging.DEBUG if settings.DEBUG else logging.INFO)
 
-    handler = logging.StreamHandler(sys.stdout)
-    handler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
-    logger.addHandler(handler)
+    if not logger.handlers:
+        handler = logging.StreamHandler(sys.stdout)
+        handler.setFormatter(
+            logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+        )
+        logger.addHandler(handler)
 
     # Middleware
     app.add_middleware(
@@ -76,7 +79,8 @@ def create_app() -> FastAPI:
     app.include_router(profiles.router, prefix="/profiles", tags=["user_profiles"])
     app.include_router(admin.router, prefix="/admin", tags=["admin"])
     app.include_router(verification.router, prefix="/verification", tags=["verification"])
-
+    app.include_router(user_reports.router, prefix="/reports", tags=["user_reports"])
+    
     @app.get("")
     async def root_no_slash():
         return RedirectResponse(url="/")

@@ -135,8 +135,7 @@ def reset_password(
     verify_gen = verify_code(db, logger, uid, request.code, purpose="reset")
     next(verify_gen)
 
-    # lil troll hehe
-    if request.new_password:
+    if not request.new_password:
         raise BadRequest("Password cannot be the same as old password")
 
     try:

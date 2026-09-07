@@ -3,13 +3,12 @@
 # ACM MeteorMate | All Rights Reserved
 
 import logging
+from typing import List
+
 import numpy as np
-from typing import List, Dict
 
 from sqlalchemy.orm import Session
 from models.user import User
-from models.user_profile import UserProfile
-from models.survey import Survey
 from models.matches import Match
 from services.matching_config import sim_matrix, q_weights
 
@@ -31,53 +30,48 @@ def top_k_matches(db: Session, user_id: str, k: int = 10) -> List[User]:
     active_users = (
         db.query(User).filter(
             User.id != user_id,
-            User.is_active == True,
+            User.is_active.is_(True),
             User.id.notin_(already_matched_subquery),
-        ).all()
+            # make sure all candidates have completed survey and profile
+            User.survey.has(), 
+            User.profile.has()
+        )
     )
+
+    # filter out users violating dealbreakers
+    if "smoke_vape" in current_user.survey.dealbreakers:
+        active_users = active_users.filter(User.survey.has(Survey.smoke_vape == False))
+    
+    if "drink" in current_user.survey.dealbreakers:
+        active_users = active_users.filter(User.survey.has(Survey.drink == False))
+    
+    if "same_gender" in current_user.survey.dealbreakers:
+        active_users = active_users.filter(User.profile.has(UserProfile.gender == current_user.profile.gender))
+        
+    if "freshman_dorms" in current_user.survey.on_campus_locations:
+        active_users = active_users.filter(User.survey.has(Survey.on_campus_locations.any("freshman_dorms")))
+
+    active_users = active_users.all()
 
     if len(active_users) == 0:
         logger.info(f"No potential matches found for user {user_id}")
         return []
 
     logger.info(
-        f"User {user_id} has {len(active_users)} potential matches after filtering out inactive users and already matched users"
+        f"User {user_id} has {len(active_users)} potential matches after filtering out inactive users, already matched users, and users violating dealbreakers"
     )
 
-    uids = np.array([user.user_id for user in active_users], dtype=object)
-    uid_to_user = {user.user_id: user for user in active_users}
+    uids = np.array([user.id for user in active_users], dtype=object)
+    uid_to_user = {user.id: user for user in active_users}
 
     uid_scores = {}
 
     q_idx = np.arange(47)
 
-    for uid in uids:
-        potential_match = uid_to_user[uid]
-        
-        if not potential_match.survey or not potential_match.profile:
-            logger.warning(f"Potential match {uid} for user {user_id} is missing survey or profile data, skipping")
-            continue
-
-        if ("smoke_vape" in current_user.survey.dealbreakers and potential_match.survey.smoke_vape):
-            continue
-        if ("drink" in current_user.survey.dealbreakers and potential_match.survey.drink):
-            continue
-        if (
-            "same_gender" in current_user.survey.dealbreakers
-            and potential_match.profile.gender != current_user.profile.gender
-        ):
-            continue
-
-        potential_match_answers = np.array(potential_match.survey.encoded_answers)
-        sim_scores = sim_matrix[q_idx, current_user_answers, potential_match_answers]
-        average_sim_score = np.sum(q_weights * sim_scores) / np.sum(q_weights)
-        uid_scores[uid] = average_sim_score
-
-    sorted_uids = sorted(uid_scores, key=uid_scores.get, reverse=True)
-
-    logger.info(
-        f"User has {len(sorted_uids)} matches after applying dealbreaker filters and calculating similarity scores"
-    )
+    potential_match_answers = np.array([uid_to_user[uid].survey.encoded_answers for uid in uids])
+    sim_scores = sim_matrix[q_idx, current_user_answers, potential_match_answers] # (N, Q)
+    avg_sim_scores = np.sum(q_weights * sim_scores, axis=-1) / np.sum(q_weights) # (N,) 
+    sorted_uids = uids[avg_sim_scores.argsort()[::-1]]
 
     top_k_uids = sorted_uids[:k]
     top_k_matches = [uid_to_user[uid] for uid in top_k_uids]
