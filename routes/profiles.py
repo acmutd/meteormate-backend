@@ -110,59 +110,25 @@ async def delete_profile_pics(
     if not profile:
         logger.warning(f"profile not found for User {uid}")
         raise NotFound("User profile")
-
-    logger.info(
-        "Profile picture deletion requested (User: %s, requested_count=%d, stored_count=%d)",
-        uid,
-        len(pictures_to_delete.profile_picture_url),
-        len(profile.profile_picture_url or []),
-    )
-
+    
     for url in pictures_to_delete.profile_picture_url:
         # this basically parses the url to recognize any params with '?' and any url encodings
         parsed_url = urlparse(url)
         url_path = unquote(parsed_url.path)  # get only the path
         file_name = url_path.split("/")[-1]
-        blob_path = f"profile_pictures/{uid}/{file_name}"
-        is_stored_url = url in (profile.profile_picture_url or [])
-
-        # Do not log the complete URL: Firebase download URLs can contain access tokens.
-        logger.info(
-            "Resolved profile picture delete target "
-            "(User: %s, hostname=%s, decoded_path=%s, blob_path=%s, present_in_profile=%s)",
-            uid,
-            parsed_url.hostname,
-            url_path,
-            blob_path,
-            is_stored_url,
-        )
 
         # Remove the picture URL from the list
-        if is_stored_url:
+        if url in profile.profile_picture_url:
             # firebase storage helper don't confuse with endpoint function (also don't catch exceptions from this)
-            delete_profile_picture(blob_path)
+            delete_profile_picture(f"profile_pictures/{uid}/{file_name}")
             
             for i in range(len(profile.profile_picture_url)):
                 if profile.profile_picture_url[i] == url:
                     profile.profile_picture_url[i] = "" # set to empty string instead of removing to maintain list length of 5
-        else:
-            logger.warning(
-                "Skipping profile picture delete because URL is not stored on the profile "
-                "(User: %s, hostname=%s, decoded_path=%s)",
-                uid,
-                parsed_url.hostname,
-                url_path,
-            )
 
     commit_or_raise(db, logger, resource="user profile", uid=uid, action="delete pictures")
 
     db.refresh(profile)
-
-    logger.info(
-        "Profile picture deletion completed (User: %s, requested_count=%d)",
-        uid,
-        len(pictures_to_delete.profile_picture_url),
-    )
 
     return profile
 
