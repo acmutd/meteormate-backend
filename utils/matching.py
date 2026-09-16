@@ -219,9 +219,6 @@ def encode_answers(survey: SurveyCreate, profile) -> list[int]:
         ),
     ]
 
-    for location in ON_CAMPUS_LOCATION_INDEX.keys():
-        answers.append(1 if location in survey.on_campus_locations else 0)
-
     for interest in POSSIBLE_INTERESTS:
         answers.append(1 if interest in survey.interests else 0)
 

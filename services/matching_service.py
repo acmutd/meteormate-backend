@@ -3,19 +3,20 @@
 # ACM MeteorMate | All Rights Reserved
 
 import logging
-from typing import List
 
 import numpy as np
-
 from sqlalchemy.orm import Session
-from models.user import User
+
 from models.matches import Match
-from services.matching_config import sim_matrix, q_weights
+from models.survey import Survey
+from models.user import User
+from models.user_profile import UserProfile
+from services.matching_config import q_weights, sim_matrix
 
 logger = logging.getLogger("meteormate." + __name__)
 
 
-def top_k_matches(db: Session, user_id: str, k: int = 10) -> List[User]:
+def top_k_matches(db: Session, user_id: str, k: int = 10) -> list[User]:
     current_user = db.query(User).filter(User.id == user_id).first()
     if not current_user:
         logger.warning(f"User {user_id} attempted to find matches but does not exist")
@@ -50,6 +51,11 @@ def top_k_matches(db: Session, user_id: str, k: int = 10) -> List[User]:
         
     if "freshman_dorms" in current_user.survey.on_campus_locations:
         active_users = active_users.filter(User.survey.has(Survey.on_campus_locations.any("freshman_dorms")))
+        
+    # make sure users are looking for the same on campus location
+    active_users = active_users.filter(
+        User.survey.has(Survey.on_campus_locations.any(current_user.survey.on_campus_locations))
+    )
 
     active_users = active_users.all()
 
@@ -63,8 +69,6 @@ def top_k_matches(db: Session, user_id: str, k: int = 10) -> List[User]:
 
     uids = np.array([user.id for user in active_users], dtype=object)
     uid_to_user = {user.id: user for user in active_users}
-
-    uid_scores = {}
 
     q_idx = np.arange(47)
 
