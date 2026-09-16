@@ -6,13 +6,23 @@ import logging
 import sys
 
 from fastapi import FastAPI, Request
-from fastapi.middleware.cors import CORSMiddleware
 from fastapi.exceptions import RequestValidationError
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, RedirectResponse
 
 from config import settings
+from routes import (
+    admin,
+    auth,
+    cron,
+    matches,
+    notifications,
+    profiles,
+    survey,
+    user_reports,
+    verification,
+)
 from utils.exceptions import AppException
-from routes import auth, survey, matches, cron, profiles, admin, verification, user_reports
 
 
 def create_app() -> FastAPI:
@@ -25,7 +35,7 @@ def create_app() -> FastAPI:
     if not logger.handlers:
         handler = logging.StreamHandler(sys.stdout)
         handler.setFormatter(
-            logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+            logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
         )
         logger.addHandler(handler)
 
@@ -40,7 +50,9 @@ def create_app() -> FastAPI:
 
     # Exception handling
     @app.exception_handler(RequestValidationError)
-    async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    async def validation_exception_handler(
+        request: Request, exc: RequestValidationError
+    ):
         errors = []
         for error in exc.errors():
             field = error["loc"][-1] if error["loc"] else "unknown"
@@ -58,10 +70,7 @@ def create_app() -> FastAPI:
 
         return JSONResponse(
             status_code=422,
-            content={
-                "error": "Validation failed",
-                "details": errors
-            },
+            content={"error": "Validation failed", "details": errors},
         )
 
     @app.exception_handler(AppException)
@@ -78,9 +87,14 @@ def create_app() -> FastAPI:
     app.include_router(cron.router, prefix="/cron", tags=["cron"])
     app.include_router(profiles.router, prefix="/profiles", tags=["user_profiles"])
     app.include_router(admin.router, prefix="/admin", tags=["admin"])
-    app.include_router(verification.router, prefix="/verification", tags=["verification"])
+    app.include_router(
+        verification.router, prefix="/verification", tags=["verification"]
+    )
     app.include_router(user_reports.router, prefix="/reports", tags=["user_reports"])
-    
+    app.include_router(
+        notifications.router, prefix="/notifications", tags=["notifications"]
+    )
+
     @app.get("")
     async def root_no_slash():
         return RedirectResponse(url="/")
