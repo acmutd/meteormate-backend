@@ -11,7 +11,7 @@ from typing import List, Literal, Optional
 from pydantic import BaseModel, field_validator, model_validator
 
 from config import settings
-from utils.exceptions import BadRequest, UnprocessableEntity
+from utils.exceptions import BadRequest
 
 Gender = Literal["female", "male", "non_binary", "prefer_not_to_say", "other"]
 Classification = Literal["freshman", "sophomore", "junior", "senior", "graduate"]
@@ -20,14 +20,10 @@ School = Literal["AHT", "BBS", "EPPS", "ECS", "IDS", "JSOM", "NSM"]
 
 def validate_name(name: str, min_len: int, max_len: int, position: str) -> str:
     if not (min_len <= len(name) <= max_len):
-        raise BadRequest(
-            f"{position} name must be between {min_len} and {max_len} characters"
-        )
+        raise BadRequest(f"{position} name must be between {min_len} and {max_len} characters")
 
     if not name.isalpha():
-        raise BadRequest(
-            f"{position} name cannot contain any numbers or special characters"
-        )
+        raise BadRequest(f"{position} name cannot contain any numbers or special characters")
 
     return name
 
@@ -55,9 +51,7 @@ class UserProfileBase(BaseModel):
         if v is None:
             return v
 
-        return validate_name(
-            v, settings.FIRST_NAME_MIN_LEN, settings.FIRST_NAME_MAX_LEN, "first"
-        )
+        return validate_name(v, settings.FIRST_NAME_MIN_LEN, settings.FIRST_NAME_MAX_LEN, "first")
 
     @field_validator("last_name")
     @classmethod
@@ -65,9 +59,7 @@ class UserProfileBase(BaseModel):
         if v is None:
             return v
 
-        return validate_name(
-            v, settings.LAST_NAME_MIN_LEN, settings.LAST_NAME_MAX_LEN, "last"
-        )
+        return validate_name(v, settings.LAST_NAME_MIN_LEN, settings.LAST_NAME_MAX_LEN, "last")
 
     @field_validator("dob")
     @classmethod
@@ -104,9 +96,7 @@ class UserProfileBase(BaseModel):
         today = datetime.now()
         age = today.year - dob.year - ((today.month, today.day) < (dob.month, dob.day))
         if not (settings.MIN_AGE <= age <= settings.MAX_AGE):
-            raise BadRequest(
-                f"Age must be between {settings.MIN_AGE} and {settings.MAX_AGE} years"
-            )
+            raise BadRequest(f"Age must be between {settings.MIN_AGE} and {settings.MAX_AGE} years")
 
         values.age = age
 
@@ -150,39 +140,16 @@ class UserProfileResponse(BaseModel):
         from_attributes = True
 
 
-class UserProfilePicture(BaseModel):
-    base64: str
+class UserProfileDeletePictures(BaseModel):
+    profile_picture_url: List[str]
 
-    ext: str
-    image_bytes: bytes
-
-    @model_validator(mode="before")
+    @field_validator("profile_picture_url")
     @classmethod
-    def parse_and_validate(cls, values):
-        raw = values.get("base64")
-        if not raw or "," not in raw:
-            raise UnprocessableEntity("Image data not in base64 format")
+    def validate_picture_count(cls, v):
+        if len(v) == 0:
+            raise BadRequest("At least one profile picture must be provided for deletion")
 
-        header, data = raw.split(",", 1)
-
-        if not header.startswith("data:image/") or ";base64" not in header:
-            raise UnprocessableEntity("Invalid image base64 header")
-
-        ext = header[len("data:image/") : header.index(";base64")]
-        if ext not in {"jpeg", "jpg", "png", "webp"}:
-            raise UnprocessableEntity("Not an acceptable image type")
-
-        try:
-            image_bytes = base64.b64decode(data, validate=True)
-        except (ValueError, binascii.Error):
-            raise UnprocessableEntity(
-                "Image data has incorrect padding or invalid characters"
-            )
-
-        values["ext"] = ext
-        values["image_bytes"] = image_bytes
-
-        return values
+        return v
 
 
 class UserUpdateNotifications(BaseModel):
@@ -192,10 +159,7 @@ class UserUpdateNotifications(BaseModel):
     @model_validator(mode="before")
     @classmethod
     def validate_atleast_one(cls, values):
-        if (
-            values.get("match_notification") is None
-            and values.get("promotional_notification") is None
-        ):
+        if (values.get("match_notification") is None and values.get("promotional_notification") is None):
             raise BadRequest("At least one notification preference must be provided")
 
         return values
