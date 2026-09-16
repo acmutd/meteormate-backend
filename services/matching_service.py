@@ -51,6 +51,11 @@ def top_k_matches(db: Session, user_id: str, k: int = 10) -> list[User]:
         
     if "freshman_dorms" in current_user.survey.on_campus_locations:
         active_users = active_users.filter(User.survey.has(Survey.on_campus_locations.any("freshman_dorms")))
+        
+    # make sure users are looking for the same on campus location
+    active_users = active_users.filter(
+        User.survey.has(Survey.on_campus_locations.any(current_user.survey.on_campus_locations))
+    )
 
     active_users = active_users.all()
 
