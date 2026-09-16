@@ -5,30 +5,34 @@ import logging
 from typing import Annotated
 
 from fastapi import APIRouter, Depends
+from pyrate_limiter import Duration, Limiter, Rate
+from fastapi_limiter.depends import RateLimiter
+from sqlalchemy.orm import Session
 from firebase_admin import auth
 from firebase_admin.exceptions import FirebaseError
-from sqlalchemy.orm import Session
 
-from config import settings
 from database import get_db
-from models.user import User
+from config import settings
 from schemas.user import UserResetPassword, UserVerifyEmail
-from utils.email import send_verification_email
 from utils.exceptions import (
     BadRequest,
     Forbidden,
     InternalServerError,
 )
+from models.user import User
 from utils.firebase_auth import get_current_user, get_firebase_user
-from utils.rate_limiters import verification_send_limiter, verification_submit_limiter
+from utils.email import send_verification_email
+
 from utils.verification_codes import create_verification_code, verify_code
 
 logger = logging.getLogger("meteormate." + __name__)
 
-router = APIRouter()
+limiter = Limiter(Rate(1, Duration.MINUTE)) # 1 request per minute for all endpoints in this router
+rate_limit = Depends(RateLimiter(limiter))
+router = APIRouter(dependencies=[rate_limit])
 
 
-@router.get("/account_verification", dependencies=[verification_send_limiter])
+@router.get("/account_verification")
 def send_account_verification_email(
     current_user: Annotated[User, Depends(get_current_user)],
     db: Annotated[Session, Depends(get_db)],
@@ -53,14 +57,14 @@ def send_account_verification_email(
     except Exception as e:
         db.rollback()
         logger.error(
-            f"There was an error sending an email to User {uid}: {e!s}",
+            f"There was an error sending an email to User {uid}: {str(e)}",
             exc_info=settings.DEBUG,
         )
 
         raise InternalServerError("Failed to send verification code")
 
 
-@router.post("/account_verification", dependencies=[verification_submit_limiter])
+@router.post("/account_verification")
 def account_verification(
     code_data: UserVerifyEmail,
     current_user: Annotated[User, Depends(get_current_user)],
@@ -76,7 +80,7 @@ def account_verification(
         next(verify_gen, None)  # consume code after Firebase update succeeds, raises if error happens during deletion
     except Exception as e:
         logger.error(
-            f"There was an error verifying User {uid}'s email: {e!s}",
+            f"There was an error verifying User {uid}'s email: {str(e)}",
             exc_info=settings.DEBUG,
         )
         raise InternalServerError("Error updating user")
@@ -85,7 +89,7 @@ def account_verification(
     return {"message": "Email verified successfully"}
 
 
-@router.get("/reset_password/{email}", dependencies=[verification_send_limiter])
+@router.get("/reset_password/{email}")
 def send_reset_password_email(
     email: str,
     db: Annotated[Session, Depends(get_db)],
@@ -108,14 +112,14 @@ def send_reset_password_email(
     except Exception as e:
         db.rollback()
         logger.error(
-            f"There was an error sending an email to User {uid}: {e!s}",
+            f"There was an error sending an email to User {uid}: {str(e)}",
             exc_info=settings.DEBUG,
         )
 
         raise InternalServerError("Failed to send verification code")
 
 
-@router.post("/reset_password", dependencies=[verification_submit_limiter])
+@router.post("/reset_password")
 def reset_password(
     request: UserResetPassword,
     db: Annotated[Session, Depends(get_db)],
@@ -139,7 +143,7 @@ def reset_password(
         next(verify_gen, None)  # consume code after Firebase update succeeds
     except FirebaseError as e:
         logger.error(
-            f"There was an error resetting password for User {uid}: {e!s}",
+            f"There was an error resetting password for User {uid}: {str(e)}",
             exc_info=settings.DEBUG,
         )
         raise InternalServerError("Error updating user")
