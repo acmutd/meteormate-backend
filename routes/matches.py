@@ -48,9 +48,9 @@ async def get_potential_matches(
             f"Database error fetching matches for user {current_user.id}: {e!s}"
         )
         raise InternalServerError("Database error fetching matches")
-    except Exception as e:
-        logger.error(
-            f"Unexpected error fetching matches for user {current_user.id}: {e!s}"
+    except Exception:
+        logger.exception(
+            f"Unexpected error fetching matches for user {current_user.id}"
         )
         raise InternalServerError("Unexpected error fetching matches")
 
@@ -99,7 +99,7 @@ async def pass_user(
     return {"message": "User passed on successfully"}
 
 
-@router.get("/matches")
+@router.get("/get_matches")
 async def get_matches(
     current_user: Annotated[User, Depends(ensure_email_verified)],
     db: Annotated[Session, Depends(get_db)],
