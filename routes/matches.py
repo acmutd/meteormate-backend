@@ -73,8 +73,18 @@ async def like_user(
 
     db.refresh(new_match)
 
+    reciprocal_match = (
+        db.query(Match)
+        .filter(
+            Match.user_id == target_user_id,
+            Match.target_user_id == uid,
+            Match.is_like == True,
+        )
+        .first()
+    )
+
     logger.info(f"User {uid} liked User {target_user_id}")
-    return {"message": "User liked successfully"}
+    return {"message": "User liked successfully", "mutual_like": bool(reciprocal_match)}
 
 
 @router.post("/pass/{target_user_id}")
