@@ -6,13 +6,22 @@ import logging
 import sys
 
 from fastapi import FastAPI, Request
-from fastapi.middleware.cors import CORSMiddleware
 from fastapi.exceptions import RequestValidationError
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, RedirectResponse
 
 from config import settings
+from routes import (
+    admin,
+    auth,
+    cron,
+    matches,
+    profiles,
+    survey,
+    user_reports,
+    verification,
+)
 from utils.exceptions import AppException
-from routes import auth, survey, matches, cron, profiles, admin, verification, user_reports
 
 
 def create_app() -> FastAPI:

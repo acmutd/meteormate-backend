@@ -2,8 +2,9 @@
 # ACM MeteorMate | All Rights Reserved
 
 import json
+from typing import ClassVar
+
 from decouple import config
-from typing import List
 
 
 class Settings:
@@ -12,7 +13,7 @@ class Settings:
     FIREBASE_CREDENTIALS = json.loads(config("FIREBASE_CREDENTIALS", default="{}"))
     FIREBASE_STORAGE_BUCKET: str = config("FIREBASE_STORAGE_BUCKET", default="")
 
-    ALLOWED_ORIGINS: List[str] = ["*"]  # todo - change this to meteormate.com when site is live
+    ALLOWED_ORIGINS: ClassVar[list[str]] = ["*"]  # todo - change this to meteormate.com when site is live
     DEBUG: bool = config("DEBUG", default=False, cast=bool)
 
     # ai service config
