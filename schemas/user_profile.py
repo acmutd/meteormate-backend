@@ -2,8 +2,12 @@
 # Updated by Atharva Mishra
 # ACM MeteorMate | All Rights Reserved
 
-from typing import List, Optional, Literal
+import base64
+import binascii
+from better_profanity import profanity
 from datetime import datetime
+from typing import List, Literal, Optional
+
 from pydantic import BaseModel, field_validator, model_validator
 
 from config import settings
@@ -66,6 +70,17 @@ class UserProfileBase(BaseModel):
         if v > datetime.now():
             raise BadRequest("Date of birth cannot be in the future")
 
+        return v
+
+    @field_validator("bio")
+    @classmethod
+    def validate_bio(cls, v):
+        if v is None:
+            return v
+
+        if profanity.contains_profanity(v):
+            raise BadRequest("Bio cannot contain profanity")
+        
         return v
 
     @model_validator(mode="after")
