@@ -105,9 +105,9 @@ _place(
 _place(
     7,
     [
-        [1.0, 0.5, 0.7],  # never   — fine with another non-cook, also fine with a cook
-        [0.5, 1.0, 0.7],  # often   — enjoys cooking, slightly prefers someone similar
-        [0.7, 0.7, 1.0],  # rarely  — flexible, gets along with both
+        [1.0, 0.7, 0.5],  # never
+        [0.7, 1.0, 0.7],  # rarely
+        [0.5, 0.7, 1.0],  # often
     ]
 )
 
@@ -127,9 +127,9 @@ _place(
 _place(
     9,
     [
-        [1.0, 0.05, 0.35],  # never     — strong clash with "often"
-        [0.05, 1.0, 0.60],  # often     — somewhat compatible with "sometimes"
-        [0.35, 0.60, 1.0],  # sometimes — middle ground
+        [1.0, 0.35, 0.05],  # never
+        [0.35, 1.0, 0.60],  # sometimes
+        [0.05, 0.60, 1.0],  # often
     ]
 )
 
@@ -137,9 +137,9 @@ _place(
 _place(
     10,
     [
-        [1.0, 0.6, 0.05],  # close_friends
-        [0.6, 1.0, 0.40],  # friends
-        [0.05, 0.40, 1.0],  # not_close
+        [1.0, 0.40, 0.05],  # not_close
+        [0.40, 1.0, 0.6],  # friends
+        [0.05, 0.6, 1.0],  # close_friends
     ]
 )
 
@@ -148,8 +148,8 @@ for i in range(11, 11 + 32):
     _place(
         i,
         [
-            [1.0, 0.5],  # has interest
-            [0.5, 0.5]  # doesn't have interest
+            [0.5, 0.5],  # doesn't have interest
+            [0.5, 1.0],  # has interest
         ]
     )
 
