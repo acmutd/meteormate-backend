@@ -1,4 +1,5 @@
 from schemas.survey import SurveyCreate
+from services.matching_config import NUM_QUESTIONS
 
 GENDER_INDEX = {
     "female": 0,
@@ -70,13 +71,6 @@ ROOMMATE_CLOSENESS_INDEX = {
     "not_close": 0,
     "friends": 1,
     "close_friends": 2,
-}
-
-ON_CAMPUS_LOCATION_INDEX = {
-    "cc": 0,
-    "freshman_dorms": 1,
-    "northside": 2,
-    "uv": 3,
 }
 
 NUM_ROOMMATES_INDEX = {
@@ -214,13 +208,7 @@ def encode_answers(survey: SurveyCreate, profile) -> list[int]:
         PET_PREFERENCE_INDEX.get(survey.pet_preference, -1),
         GUESTS_FREQUENCY_INDEX.get(survey.guests_frequency, -1),
         ROOMMATE_CLOSENESS_INDEX.get(survey.roommate_closeness, -1),
-        ON_CAMPUS_LOCATION_INDEX.get(
-            survey.on_campus_locations[0].value if survey.on_campus_locations else None, -1
-        ),
     ]
-
-    for location in ON_CAMPUS_LOCATION_INDEX.keys():
-        answers.append(1 if location in survey.on_campus_locations else 0)
 
     for interest in POSSIBLE_INTERESTS:
         answers.append(1 if interest in survey.interests else 0)
@@ -228,5 +216,10 @@ def encode_answers(survey: SurveyCreate, profile) -> list[int]:
     answers.append(1 if survey.honors else 0)
     answers.append(1 if survey.llc_interest else 0)
     answers.append(NUM_ROOMMATES_INDEX.get(survey.num_roommates, -1))
+
+    if len(answers) != NUM_QUESTIONS:
+        raise ValueError(
+            f"Expected {NUM_QUESTIONS} matching answers, got {len(answers)}"
+        )
 
     return answers
