@@ -7,7 +7,7 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends
 from sqlalchemy.exc import SQLAlchemyError
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 
 from database import commit_or_raise, get_db
 from models.matches import Match
@@ -117,30 +117,35 @@ async def get_matches(
     uid = current_user.id
 
     try:
-        matches = (
-            db.query(Match).filter(Match.user_id == uid, Match.is_like == True).all()
-        )
-
-        matched_users = []
-        for match in matches:
-            reciprocal_match = (
-                db.query(Match)
-                .filter(
-                    Match.user_id == match.target_user_id,
-                    Match.target_user_id == uid,
-                    Match.is_like == True,
-                )
-                .first()
+        likes = (
+            db.query(Match)
+            .options(
+                joinedload(Match.target_user).joinedload(User.profile),
+                joinedload(Match.target_user).joinedload(User.survey),
             )
+            .filter(Match.user_id == uid, Match.is_like.is_(True))
+            .all()
+        )
+        liked_ids = [m.target_user_id for m in likes]
 
-            if reciprocal_match:
-                matched_users.append(
-                    {
-                        "uid": match.target_user_id,
-                        "profile": match.target_user.profile,
-                        "survey": match.target_user.survey,
-                    }
-                )
+        mutual_ids = {
+            row.user_id
+            for row in db.query(Match.user_id).filter(
+                Match.user_id.in_(liked_ids),
+                Match.target_user_id == uid,
+                Match.is_like.is_(True),
+            )
+        }
+
+        matched_users = [
+            {
+                "uid": m.target_user_id,
+                "profile": m.target_user.profile,
+                "survey": m.target_user.survey,
+            }
+            for m in likes
+            if m.target_user_id in mutual_ids
+        ]
 
         logger.info(f"User {uid} fetched their matches")
         return {"matches": matched_users}
