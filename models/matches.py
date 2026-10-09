@@ -2,6 +2,7 @@
 # ACM MeteorMate | All Rights Reserved
 
 from sqlalchemy import Column, Text, Boolean, DateTime, ForeignKey, Integer
+from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from database import ORMBase
 
@@ -14,3 +15,6 @@ class Match(ORMBase):
     target_user_id = Column(Text, ForeignKey("users.id"))
     is_like = Column(Boolean)  # true for like, false for pass
     created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    user = relationship("User", foreign_keys=[user_id])
+    target_user = relationship("User", foreign_keys=[target_user_id])
