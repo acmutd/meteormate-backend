@@ -9,19 +9,25 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
 from database import commit_or_raise, get_db
-from utils.exceptions import BadRequest, NotFound
 from models.survey import Survey
 from models.user import User
 from schemas.survey import SurveyCreate, SurveyResponse, SurveyUpdate
+from utils.exceptions import BadRequest, NotFound
 from utils.firebase_auth import ensure_email_verified
 from utils.matching import encode_answers
-from utils.rate_limiters import sensitive_updates_limiter, regular_updates_limiter, get_rate_limiter
+from utils.rate_limiters import (
+    get_rate_limiter,
+    regular_updates_limiter,
+    sensitive_updates_limiter,
+)
 
 logger = logging.getLogger("meteormate." + __name__)
 router = APIRouter()
 
 
-@router.post("", response_model=SurveyResponse, dependencies=[sensitive_updates_limiter])
+@router.post(
+    "", response_model=SurveyResponse, dependencies=[sensitive_updates_limiter]
+)
 async def create_survey(
     survey_data: SurveyCreate,
     current_user: Annotated[User, Depends(ensure_email_verified)],

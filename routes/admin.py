@@ -2,12 +2,13 @@ import logging
 from typing import Annotated
 
 from fastapi import APIRouter, Depends
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from database import commit_or_raise, get_db
-from models.admin import Banlist, Admins
+from models.admin import Admins, Banlist
 from models.user import User
-from utils.exceptions import Forbidden, NotFound, Conflict
+from utils.exceptions import Conflict, Forbidden, NotFound
 from utils.firebase_auth import ensure_admin
 
 logger = logging.getLogger("meteormate." + __name__)
@@ -20,12 +21,12 @@ def ban_user(
     db: Annotated[Session, Depends(get_db)],
     _: Annotated[None, Depends(ensure_admin)],
 ):
-    user = db.query(User).filter(User.utd_id == net_id).first()
+    user = db.execute(select(User).where(User.utd_id == net_id)).scalar_one_or_none()
     if not user:
         logger.warning(f"Attempted to ban non-existent user {net_id}")
         raise NotFound(f"User {net_id} not found")
 
-    if db.query(Banlist).filter(Banlist.net_id == net_id).first():
+    if user.is_banned:
         logger.warning(f"Attempted to ban already banned user {net_id}")
         raise Conflict(f"User {net_id} is already banned")
 
@@ -35,8 +36,8 @@ def ban_user(
     db.add(banned_user)
     commit_or_raise(db, logger, resource="banlist entry", uid=net_id, action="create")
 
-    db.refresh(user)
-    db.refresh(banned_user)
+    # db.refresh(user)
+    # db.refresh(banned_user)
 
     logger.info(f"User {net_id} (Net ID: {user.utd_id}) has been banned")
     return {"message": f"User {net_id} has been banned"}
@@ -48,14 +49,16 @@ def unban_user(
     db: Annotated[Session, Depends(get_db)],
     _: Annotated[None, Depends(ensure_admin)],
 ):
-    ban_entry = db.query(Banlist).filter(Banlist.net_id == net_id).first()
+    ban_entry = db.execute(
+        select(Banlist).where(Banlist.net_id == net_id)
+    ).scalar_one_or_none()
     if not ban_entry:
         logger.warning(f"Attempted to unban non-banned user {net_id}")
         raise NotFound(f"User {net_id} is not currently banned")
 
     db.delete(ban_entry)
 
-    user = db.query(User).filter(User.utd_id == net_id).first()
+    user = db.execute(select(User).where(User.utd_id == net_id)).scalar_one_or_none()
     if user:
         user.is_banned = False
 
@@ -73,12 +76,12 @@ def add_admin(
     db: Annotated[Session, Depends(get_db)],
     _: Annotated[None, Depends(ensure_admin)],
 ):
-    user = db.query(User).filter(User.utd_id == net_id).first()
+    user = db.execute(select(User).where(User.utd_id == net_id)).scalar_one_or_none()
     if not user:
         logger.warning(f"Attempted to add non-existent user {net_id} as admin")
         raise NotFound(f"User {net_id} not found")
 
-    if db.query(Admins).filter(Admins.net_id == net_id).first():
+    if db.execute(select(Admins).where(Admins.net_id == net_id)).scalar_one_or_none():
         logger.warning(f"Attempted to add already-admin user {net_id} as admin again")
         raise Forbidden(f"User {net_id} is already an admin")
 
@@ -97,7 +100,9 @@ def remove_admin(
     db: Annotated[Session, Depends(get_db)],
     _: Annotated[None, Depends(ensure_admin)],
 ):
-    admin_entry = db.query(Admins).filter(Admins.net_id == net_id).first()
+    admin_entry = db.execute(
+        select(Admins).where(Admins.net_id == net_id)
+    ).scalar_one_or_none()
     if not admin_entry:
         logger.warning(f"Attempted to remove non-admin user {net_id} from admins")
         raise NotFound(f"User {net_id} is not an admin")
