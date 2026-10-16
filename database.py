@@ -2,13 +2,13 @@
 # Updated by Atharva Mishra
 # ACM MeteorMate | All Rights Reserved
 
-import logging
 import enum as py_enum
+import logging
 
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker, declarative_base, Session
-from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from psycopg2.errors import ForeignKeyViolation
+from sqlalchemy import create_engine
+from sqlalchemy.exc import IntegrityError, SQLAlchemyError
+from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
 
 from config import settings
 from utils.exceptions import Conflict, InternalServerError, NotFound
@@ -28,13 +28,21 @@ try:
     logger.info("Initializing database connection...")
 
     engine = create_engine(settings.DATABASE_URL)
-    SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+    SessionLocal = sessionmaker(expire_on_commit=False, autoflush=False, bind=engine)
 
 except Exception as e:
-    logger.critical(f"Failed to initialize database engine: {str(e)}", exc_info=settings.DEBUG)
+    logger.critical(
+        f"Failed to initialize database engine: {e!s}", exc_info=settings.DEBUG
+    )
     raise
 
-ORMBase = declarative_base()
+
+class ORMBase(DeclarativeBase):
+    pass
+
+
+def enum_values(enum_cls: type[py_enum.Enum]) -> list[str]:
+    return [e.value for e in enum_cls]
 
 
 def get_db():
@@ -46,27 +54,33 @@ def get_db():
 
 
 def commit_or_raise(
-    db: Session, route_logger: logging.Logger, resource: str = "", uid: str = "", action: str = ""
+    db: Session,
+    route_logger: logging.Logger,
+    resource: str = "",
+    uid: str = "",
+    action: str = "",
 ):
-    '''
+    """
     Commits the current transaction to the database session and handles exceptions.
     Args:
         db (Session): The SQLAlchemy database session.
         route_logger (logging.Logger): Logger for logging route-specific messages.
         resource (str): The resource being acted upon usually the db table name.
         uid (str): The user ID associated with the action.
-        action (str): The action being performed *in present tense*. 
+        action (str): The action being performed *in present tense*.
     Raises:
         NotFound: If a foreign key constraint is violated.
         Conflict: If there is an integrity conflict with existing data.
         InternalServerError: For any other unexpected database errors.
-    '''
+    """
     if uid == "":
         uid = "anonymous"
 
     try:
         db.commit()
-        route_logger.info(f"successfully completed {action} for {resource} (User: {uid})")
+        route_logger.info(
+            f"successfully completed {action} for {resource} (User: {uid})"
+        )
 
     except IntegrityError as e:
         db.rollback()
@@ -81,7 +95,7 @@ def commit_or_raise(
 
         route_logger.error(
             f"{action} failed: integrity conflict on {resource} (User: {uid})",
-            exc_info=settings.DEBUG
+            exc_info=settings.DEBUG,
         )
         raise Conflict(f"{resource} conflicts with existing data")
 
@@ -89,6 +103,6 @@ def commit_or_raise(
         db.rollback()
         route_logger.error(
             f"{action} failed: unexpected DB error on {resource} (User: {uid})",
-            exc_info=settings.DEBUG
+            exc_info=settings.DEBUG,
         )
         raise InternalServerError(f"Internal server error while {action} {resource}")

@@ -4,15 +4,17 @@
 
 import enum
 from datetime import datetime
-from typing import Optional
+from typing import TYPE_CHECKING, Optional
 
 from sqlalchemy import Boolean, DateTime, Text, func
 from sqlalchemy import Enum as SQLEnum
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from database import ORMBase
-from models.survey import Survey
-from models.user_profile import UserProfile
+
+if TYPE_CHECKING:
+    from models.survey import Survey
+    from models.user_profile import UserProfile
 
 
 class InactivityStage(str, enum.Enum):
@@ -25,8 +27,8 @@ class User(ORMBase):
     __tablename__ = "users"
 
     id: Mapped[str] = mapped_column(Text, primary_key=True, index=True)
-    utd_id: Mapped[str | None] = mapped_column(Text, unique=True, index=True)
-    email: Mapped[str | None] = mapped_column(Text, unique=True, index=True)
+    utd_id: Mapped[str] = mapped_column(Text, unique=True, index=True)
+    email: Mapped[str] = mapped_column(Text, unique=True, index=True)
 
     # behind-the-scenes stuff
     is_active: Mapped[bool] = mapped_column(
