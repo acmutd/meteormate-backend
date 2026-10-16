@@ -2,14 +2,16 @@
 # ACM MeteorMate | All Rights Reserved
 
 import enum
-from typing import Optional, Literal
+from typing import TYPE_CHECKING, Optional
 
-from pydantic import BaseModel, EmailStr
-from sqlalchemy import Column, Boolean, DateTime, Text, func, Enum as SQLEnum
-from sqlalchemy.orm import relationship
+from sqlalchemy import Boolean, Column, DateTime, ForeignKey, Integer, Text, func
+from sqlalchemy import Enum as SQLEnum
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from database import ORMBase
 
+if TYPE_CHECKING:
+    from models.groups import Groups
 
 class InactivityStage(str, enum.Enum):
     ONE_MONTH = "one_month"
@@ -49,3 +51,11 @@ class User(ORMBase):
     profile = relationship(
         "UserProfile", back_populates="user", uselist=False, cascade="all, delete-orphan"
     )
+    group_id: Mapped[int | None] = mapped_column(
+        Integer,
+        ForeignKey("groups.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
+
+    group: Mapped[Optional["Groups"]] = relationship(back_populates="members")
