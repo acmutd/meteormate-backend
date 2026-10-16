@@ -5,29 +5,30 @@ import logging
 from typing import Annotated
 
 from fastapi import APIRouter, Depends
-from pyrate_limiter import Duration, Limiter, Rate
 from fastapi_limiter.depends import RateLimiter
-from sqlalchemy.orm import Session
 from firebase_admin import auth
 from firebase_admin.exceptions import FirebaseError
+from pyrate_limiter import Duration, Limiter, Rate
+from sqlalchemy.orm import Session
 
-from database import get_db
 from config import settings
+from database import get_db
+from models.user import User
 from schemas.user import UserResetPassword, UserVerifyEmail
+from utils.email import send_verification_email
 from utils.exceptions import (
     BadRequest,
     Forbidden,
     InternalServerError,
 )
-from models.user import User
 from utils.firebase_auth import get_current_user, get_firebase_user
-from utils.email import send_verification_email
-
 from utils.verification_codes import create_verification_code, verify_code
 
 logger = logging.getLogger("meteormate." + __name__)
 
-limiter = Limiter(Rate(1, Duration.MINUTE)) # 1 request per minute for all endpoints in this router
+limiter = Limiter(
+    Rate(1, Duration.MINUTE)
+)  # 1 request per minute for all endpoints in this router
 rate_limit = Depends(RateLimiter(limiter))
 router = APIRouter(dependencies=[rate_limit])
 
@@ -42,7 +43,9 @@ def send_account_verification_email(
     firebase_user = get_firebase_user(uid=uid)
 
     if firebase_user.email_verified:
-        logger.info(f"User {uid} requested email verification but email is already verified")
+        logger.info(
+            f"User {uid} requested email verification but email is already verified"
+        )
         raise BadRequest("Email is already verified")
 
     logger.info(f"User {uid} requested a verification code for email verification")
@@ -57,7 +60,7 @@ def send_account_verification_email(
     except Exception as e:
         db.rollback()
         logger.error(
-            f"There was an error sending an email to User {uid}: {str(e)}",
+            f"There was an error sending an email to User {uid}: {e!s}",
             exc_info=settings.DEBUG,
         )
 
@@ -77,10 +80,12 @@ def account_verification(
 
     try:
         auth.update_user(uid, email_verified=True)
-        next(verify_gen, None)  # consume code after Firebase update succeeds, raises if error happens during deletion
+        next(
+            verify_gen, None
+        )  # consume code after Firebase update succeeds, raises if error happens during deletion
     except Exception as e:
         logger.error(
-            f"There was an error verifying User {uid}'s email: {str(e)}",
+            f"There was an error verifying User {uid}'s email: {e!s}",
             exc_info=settings.DEBUG,
         )
         raise InternalServerError("Error updating user")
@@ -96,7 +101,9 @@ def send_reset_password_email(
 ):
     user = get_firebase_user(email=email)
     if not user.email_verified:
-        logger.warning(f"Password reset requested for email {email} but email is not verified")
+        logger.warning(
+            f"Password reset requested for email {email} but email is not verified"
+        )
         raise Forbidden("Email is not verified")
 
     uid = user.uid

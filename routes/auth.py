@@ -7,37 +7,43 @@ from datetime import datetime, timezone
 from typing import Annotated
 
 from fastapi import APIRouter, Depends
-from sqlalchemy.orm import Session
 from firebase_admin import auth
 from firebase_admin.exceptions import FirebaseError
+from sqlalchemy.orm import Session
 
-from database import commit_or_raise, get_db
 from config import settings
+from database import commit_or_raise, get_db
 from models.admin import Banlist
 from models.user import InactivityStage, User
+from schemas.user import UserCreate, UserResponse
 from utils.exceptions import Conflict, Forbidden, InternalServerError
 from utils.firebase_auth import ensure_email_verified
 from utils.firebase_storage import delete_all_profile_pictures
-from schemas.user import UserCreate, UserResponse
-from utils.rate_limiters import sensitive_updates_limiter, get_rate_limiter
+from utils.rate_limiters import get_rate_limiter, sensitive_updates_limiter
 
 logger = logging.getLogger("meteormate." + __name__)
 
 router = APIRouter()
 
 
-@router.post("/register", response_model=UserResponse, dependencies=[sensitive_updates_limiter])
+@router.post(
+    "/register", response_model=UserResponse, dependencies=[sensitive_updates_limiter]
+)
 async def register_user(user_data: UserCreate, db: Annotated[Session, Depends(get_db)]):
     if (
-        db.query(User).filter((User.utd_id == user_data.utd_id)
-                              | (User.email == user_data.email)).first()
+        db.query(User)
+        .filter((User.utd_id == user_data.utd_id) | (User.email == user_data.email))
+        .first()
     ):
-
-        logger.warning("user tried to create an account with an existing email/Net ID in DB")
+        logger.warning(
+            "user tried to create an account with an existing email/Net ID in DB"
+        )
         raise Conflict("Account already exists")
 
     if db.query(Banlist).filter(Banlist.net_id == user_data.utd_id).first():
-        logger.warning(f"User with Net ID {user_data.utd_id} attempted to register but is banned")
+        logger.warning(
+            f"User with Net ID {user_data.utd_id} attempted to register but is banned"
+        )
         raise Forbidden(
             "You are banned from using this service. If you believe this is a mistake, please contact support."
         )
@@ -49,7 +55,9 @@ async def register_user(user_data: UserCreate, db: Annotated[Session, Depends(ge
             email=user_data.email, password=user_data.password, email_verified=False
         )
 
-        new_user = User(id=firebase_user.uid, email=user_data.email, utd_id=user_data.utd_id)
+        new_user = User(
+            id=firebase_user.uid, email=user_data.email, utd_id=user_data.utd_id
+        )
 
         db.add(new_user)
 
@@ -62,15 +70,21 @@ async def register_user(user_data: UserCreate, db: Annotated[Session, Depends(ge
         if firebase_user is not None:
             try:
                 auth.delete_user(firebase_user.uid)
-                logger.info(f"rolled back Firebase user {firebase_user.uid} after DB failure")
+                logger.info(
+                    f"rolled back Firebase user {firebase_user.uid} after DB failure"
+                )
             except Exception:
-                logger.error("failed to rollback Firebase user", exc_info=settings.DEBUG)
+                logger.error(
+                    "failed to rollback Firebase user", exc_info=settings.DEBUG
+                )
 
         raise  # re-raise the original exception
 
 
 @router.get("/me", response_model=UserResponse, dependencies=[get_rate_limiter])
-async def get_current_user_profile(current_user: Annotated[User, Depends(ensure_email_verified)]):
+async def get_current_user_profile(
+    current_user: Annotated[User, Depends(ensure_email_verified)],
+):
     logger.info(f"User {current_user.id} requested /me")
 
     return current_user
@@ -83,13 +97,15 @@ async def delete_user_account(
     db: Annotated[Session, Depends(get_db)],
 ):
     current_user.pending_deletion = True
-    commit_or_raise(db, logger, resource="user", uid=current_user.id, action="mark for deletion")
+    commit_or_raise(
+        db, logger, resource="user", uid=current_user.id, action="mark for deletion"
+    )
 
     try:
         auth.delete_user(current_user.id)
     except (ValueError, FirebaseError) as e:
         logger.error(
-            f"Error deleting User {current_user.id} account: {str(e)}",
+            f"Error deleting User {current_user.id} account: {e!s}",
             exc_info=settings.DEBUG,
         )
 
@@ -110,10 +126,12 @@ async def delete_user_account(
     db.delete(current_user)
 
     try:
-        commit_or_raise(db, logger, resource="user", uid=current_user.id, action="delete")
+        commit_or_raise(
+            db, logger, resource="user", uid=current_user.id, action="delete"
+        )
     except Exception as e:
         logger.critical(
-            f"Failed to delete User {current_user.id} from DB after Firebase deletion (delete during cron): {str(e)}",
+            f"Failed to delete User {current_user.id} from DB after Firebase deletion (delete during cron): {e!s}",
             exc_info=settings.DEBUG,
         )
 
@@ -142,6 +160,8 @@ def mark_inactive(
 ):
     current_user.inactivity_notification_stage = InactivityStage.INACTIVE
 
-    commit_or_raise(db, logger, resource="user", uid=current_user.id, action="mark inactive")
+    commit_or_raise(
+        db, logger, resource="user", uid=current_user.id, action="mark inactive"
+    )
 
     return {"status": "ok"}
