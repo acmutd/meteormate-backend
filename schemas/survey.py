@@ -1,59 +1,58 @@
 # Created by Ryan Polasky | 7/12/25
 # ACM MeteorMate | All Rights Reserved
 
-from datetime import datetime, date
-from typing import Optional, List, Dict, Any
+from datetime import date, datetime
 
 from pydantic import BaseModel, Field
 
 from models.survey import (
-    HousingIntentEnum,
-    WakeTimeEnum,
     CleanlinessEnum,
-    NoiseToleranceEnum,
     CookingFrequencyEnum,
-    PetPreferenceEnum,
-    GuestsFrequencyEnum,
-    RoommateClosenessEnum,
-    OnCampusLocationEnum,
-    NumRoommatesEnum,
-    HaveLeaseLengthEnum,
     DealbreakerEnum,
+    GuestsFrequencyEnum,
+    HaveLeaseLengthEnum,
+    HousingIntentEnum,
+    NoiseToleranceEnum,
+    NumRoommatesEnum,
+    OnCampusLocationEnum,
+    PetPreferenceEnum,
+    RoommateClosenessEnum,
+    WakeTimeEnum,
 )
 
 
 class SurveyCreate(BaseModel):
-    housing_intent: Optional[HousingIntentEnum] = None
+    housing_intent: HousingIntentEnum | None = None
 
     # sliders / dates
-    budget_min: Optional[int] = None
-    budget_max: Optional[int] = None
-    move_in_date: Optional[date] = None
+    budget_min: int | None = None
+    budget_max: int | None = None
+    move_in_date: date | None = None
 
     # wake/clean/noise
-    wake_time: Optional[WakeTimeEnum] = None
-    cleanliness: Optional[CleanlinessEnum] = None
-    noise_tolerance: Optional[NoiseToleranceEnum] = None
+    wake_time: WakeTimeEnum | None = None
+    cleanliness: CleanlinessEnum | None = None
+    noise_tolerance: NoiseToleranceEnum | None = None
 
     # interests + dealbreakers
-    interests: List[str] = Field(default_factory=list)
-    dealbreakers: List[DealbreakerEnum] = Field(default_factory=list)
+    interests: list[str] = Field(default_factory=list)
+    dealbreakers: list[DealbreakerEnum] = Field(default_factory=list)
 
     # lifestyle personality
-    cooking_frequency: Optional[CookingFrequencyEnum] = None
-    pet_preference: Optional[PetPreferenceEnum] = None
-    guests_frequency: Optional[GuestsFrequencyEnum] = None
-    roommate_closeness: Optional[RoommateClosenessEnum] = None
+    cooking_frequency: CookingFrequencyEnum | None = None
+    pet_preference: PetPreferenceEnum | None = None
+    guests_frequency: GuestsFrequencyEnum | None = None
+    roommate_closeness: RoommateClosenessEnum | None = None
 
     # on-campus
-    on_campus_locations: List[OnCampusLocationEnum] = Field(default_factory=list)
-    honors: Optional[bool] = None
-    llc_interest: Optional[bool] = None
-    num_roommates: Optional[NumRoommatesEnum] = None
+    on_campus_locations: list[OnCampusLocationEnum] = Field(default_factory=list)
+    honors: bool | None = None
+    llc_interest: bool | None = None
+    num_roommates: NumRoommatesEnum | None = None
 
     # off-campus lease branch
-    have_lease: Optional[bool] = None
-    have_lease_length: Optional[HaveLeaseLengthEnum] = None
+    have_lease: bool | None = None
+    have_lease_length: HaveLeaseLengthEnum | None = None
 
     # smoking/vaping/drinking
     smoke_vape: bool = False
@@ -61,37 +60,37 @@ class SurveyCreate(BaseModel):
 
 
 class SurveyUpdate(BaseModel):
-    housing_intent: Optional[HousingIntentEnum] = None
+    housing_intent: HousingIntentEnum | None = None
 
     # sliders / dates
-    budget_min: Optional[int] = None
-    budget_max: Optional[int] = None
-    move_in_date: Optional[date] = None
+    budget_min: int | None = None
+    budget_max: int | None = None
+    move_in_date: date | None = None
 
     # wake/clean/noise
-    wake_time: Optional[WakeTimeEnum] = None
-    cleanliness: Optional[CleanlinessEnum] = None
-    noise_tolerance: Optional[NoiseToleranceEnum] = None
+    wake_time: WakeTimeEnum | None = None
+    cleanliness: CleanlinessEnum | None = None
+    noise_tolerance: NoiseToleranceEnum | None = None
 
     # interests + dealbreakers
-    interests: Optional[List[str]] = None
-    dealbreakers: Optional[List[DealbreakerEnum]] = None
+    interests: list[str] | None = None
+    dealbreakers: list[DealbreakerEnum] | None = None
 
     # lifestyle personality
-    cooking_frequency: Optional[CookingFrequencyEnum] = None
-    pet_preference: Optional[PetPreferenceEnum] = None
-    guests_frequency: Optional[GuestsFrequencyEnum] = None
-    roommate_closeness: Optional[RoommateClosenessEnum] = None
+    cooking_frequency: CookingFrequencyEnum | None = None
+    pet_preference: PetPreferenceEnum | None = None
+    guests_frequency: GuestsFrequencyEnum | None = None
+    roommate_closeness: RoommateClosenessEnum | None = None
 
     # on-campus
-    on_campus_locations: Optional[List[OnCampusLocationEnum]] = None
-    honors: Optional[bool] = None
-    llc_interest: Optional[bool] = None
-    num_roommates: Optional[NumRoommatesEnum] = None
+    on_campus_locations: list[OnCampusLocationEnum] | None = None
+    honors: bool | None = None
+    llc_interest: bool | None = None
+    num_roommates: NumRoommatesEnum | None = None
 
     # off-campus lease branch
-    have_lease: Optional[bool] = None
-    have_lease_length: Optional[HaveLeaseLengthEnum] = None
+    have_lease: bool | None = None
+    have_lease_length: HaveLeaseLengthEnum | None = None
 
     # smoking/vaping/drinking
     smoke_vape: bool = False
@@ -102,37 +101,37 @@ class SurveyResponse(BaseModel):
     user_id: str
 
     # core branching fields
-    housing_intent: Optional[HousingIntentEnum] = None
+    housing_intent: HousingIntentEnum | None = None
 
     # sliders / dates
-    budget_min: Optional[int] = None
-    budget_max: Optional[int] = None
-    move_in_date: Optional[date] = None
+    budget_min: int | None = None
+    budget_max: int | None = None
+    move_in_date: date | None = None
 
     # wake/clean/noise
-    wake_time: Optional[WakeTimeEnum] = None
-    cleanliness: Optional[CleanlinessEnum] = None
-    noise_tolerance: Optional[NoiseToleranceEnum] = None
+    wake_time: WakeTimeEnum | None = None
+    cleanliness: CleanlinessEnum | None = None
+    noise_tolerance: NoiseToleranceEnum | None = None
 
     # interests + dealbreakers
-    interests: List[str] = Field(default_factory=list)
-    dealbreakers: List[DealbreakerEnum] = Field(default_factory=list)
+    interests: list[str] = Field(default_factory=list)
+    dealbreakers: list[DealbreakerEnum] = Field(default_factory=list)
 
     # lifestyle personality
-    cooking_frequency: Optional[CookingFrequencyEnum] = None
-    pet_preference: Optional[PetPreferenceEnum] = None
-    guests_frequency: Optional[GuestsFrequencyEnum] = None
-    roommate_closeness: Optional[RoommateClosenessEnum] = None
+    cooking_frequency: CookingFrequencyEnum | None = None
+    pet_preference: PetPreferenceEnum | None = None
+    guests_frequency: GuestsFrequencyEnum | None = None
+    roommate_closeness: RoommateClosenessEnum | None = None
 
     # on-campus
-    on_campus_locations: List[OnCampusLocationEnum] = Field(default_factory=list)
-    honors: Optional[bool] = None
-    llc_interest: Optional[bool] = None
-    num_roommates: Optional[NumRoommatesEnum] = None
+    on_campus_locations: list[OnCampusLocationEnum] = Field(default_factory=list)
+    honors: bool | None = None
+    llc_interest: bool | None = None
+    num_roommates: NumRoommatesEnum | None = None
 
     # off-campus
-    have_lease: Optional[bool] = None
-    have_lease_length: Optional[HaveLeaseLengthEnum] = None
+    have_lease: bool | None = None
+    have_lease_length: HaveLeaseLengthEnum | None = None
 
     created_at: datetime
     updated_at: datetime

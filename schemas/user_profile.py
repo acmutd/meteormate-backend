@@ -2,8 +2,9 @@
 # Updated by Atharva Mishra
 # ACM MeteorMate | All Rights Reserved
 
-from typing import List, Optional, Literal
 from datetime import datetime
+from typing import Literal
+
 from pydantic import BaseModel, field_validator, model_validator
 
 from config import settings
@@ -25,18 +26,18 @@ def validate_name(name: str, min_len: int, max_len: int, position: str) -> str:
 
 
 class UserProfileBase(BaseModel):
-    gender: Optional[Gender] = None
-    major: Optional[str] = None
-    school: Optional[School] = None
-    classification: Optional[Classification] = None
-    bio: Optional[str] = None
-    profile_picture_url: Optional[List[str]] = None
-    first_name: Optional[str] = None
-    last_name: Optional[str] = None
-    dob: Optional[datetime] = None
-    age: Optional[int] = None
-    match_notification: Optional[bool] = True
-    promotional_notification: Optional[bool] = False
+    gender: Gender | None = None
+    major: str | None = None
+    school: School | None = None
+    classification: Classification | None = None
+    bio: str | None = None
+    profile_picture_url: list[str] | None = None
+    first_name: str | None = None
+    last_name: str | None = None
+    dob: datetime | None = None
+    age: int | None = None
+    match_notification: bool | None = True
+    promotional_notification: bool | None = False
 
     class Config:
         from_attributes = True
@@ -116,7 +117,7 @@ class UserProfileResponse(BaseModel):
     last_name: str
     age: int
     dob: datetime
-    profile_picture_url: List[str]
+    profile_picture_url: list[str]
     bio: str
     match_notification: bool
     promotional_notification: bool
@@ -126,7 +127,7 @@ class UserProfileResponse(BaseModel):
 
 
 class UserProfileDeletePictures(BaseModel):
-    profile_picture_url: List[str]
+    profile_picture_url: list[str]
 
     @field_validator("profile_picture_url")
     @classmethod
@@ -138,8 +139,8 @@ class UserProfileDeletePictures(BaseModel):
 
 
 class UserUpdateNotifications(BaseModel):
-    match_notification: Optional[bool] = None
-    promotional_notification: Optional[bool] = None
+    match_notification: bool | None = None
+    promotional_notification: bool | None = None
 
     @model_validator(mode="before")
     @classmethod
