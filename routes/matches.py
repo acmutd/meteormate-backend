@@ -12,6 +12,7 @@ from sqlalchemy.orm import Session, aliased, joinedload
 
 from database import commit_or_raise, get_db
 from models.matches import Match
+from models.notifications import Notifications
 from models.user import User
 from services.matching_service import top_k_matches
 from utils.exceptions import BadRequest, Forbidden, InternalServerError
@@ -81,6 +82,15 @@ async def like_user(
             Match.is_like == True,
         )
     ).scalar_one_or_none()
+
+    if reciprocal_match:
+        db.add(
+            Notifications(
+                user_id=target_user_id,
+                title="It's a match!",
+                description=f"{current_user.profile.first_name} liked you back!",
+            )
+        )
 
     logger.info(f"User {uid} liked User {target_user_id}")
     return {"message": "User liked successfully", "mutual_like": bool(reciprocal_match)}
