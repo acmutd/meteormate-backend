@@ -6,16 +6,17 @@ import logging
 from typing import Annotated
 
 from fastapi import APIRouter, Depends
-from sqlalchemy.orm import Session
+from sqlalchemy import exists, select
 from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.orm import Session, aliased, joinedload
 
-from database import get_db
+from database import commit_or_raise, get_db
 from models.matches import Match
+from models.notifications import Notifications
 from models.user import User
 from services.matching_service import top_k_matches
+from utils.exceptions import BadRequest, Forbidden, InternalServerError
 from utils.firebase_auth import ensure_email_verified
-from utils.exceptions import Forbidden, InternalServerError, BadRequest
-from database import commit_or_raise
 
 logger = logging.getLogger("meteormate." + __name__)
 
@@ -29,7 +30,9 @@ async def get_potential_matches(
     limit: int = 10,
 ):
     if not current_user.survey or not current_user.survey.encoded_answers:
-        logger.warning(f"User {current_user.id} requested matches without a completed survey")
+        logger.warning(
+            f"User {current_user.id} requested matches without a completed survey"
+        )
         raise Forbidden("Complete your survey to see potential matches")
 
     try:
@@ -37,17 +40,20 @@ async def get_potential_matches(
         logger.info(f"User {current_user.id} fetched potential matches")
 
         return {
-            "matches": [{
-                "uid": match.id,
-                "profile": match.profile,
-                "survey": match.survey
-            } for match in matches]
+            "matches": [
+                {"uid": match.id, "profile": match.profile, "survey": match.survey}
+                for match in matches
+            ]
         }
     except SQLAlchemyError as e:
-        logger.error(f"Database error fetching matches for user {current_user.id}: {str(e)}")
+        logger.error(
+            f"Database error fetching matches for user {current_user.id}: {e!s}"
+        )
         raise InternalServerError("Database error fetching matches")
-    except Exception as e:
-        logger.error(f"Unexpected error fetching matches for user {current_user.id}: {str(e)}")
+    except Exception:
+        logger.exception(
+            f"Unexpected error fetching matches for user {current_user.id}"
+        )
         raise InternalServerError("Unexpected error fetching matches")
 
 
@@ -69,8 +75,25 @@ async def like_user(
 
     db.refresh(new_match)
 
+    reciprocal_match = db.execute(
+        select(Match).where(
+            Match.user_id == target_user_id,
+            Match.target_user_id == uid,
+            Match.is_like == True,
+        )
+    ).scalar_one_or_none()
+
+    if reciprocal_match:
+        db.add(
+            Notifications(
+                user_id=target_user_id,
+                title="It's a match!",
+                description=f"{current_user.profile.first_name} liked you back!",
+            )
+        )
+
     logger.info(f"User {uid} liked User {target_user_id}")
-    return {"message": "User liked successfully"}
+    return {"message": "User liked successfully", "mutual_like": bool(reciprocal_match)}
 
 
 @router.post("/pass/{target_user_id}")
@@ -93,3 +116,50 @@ async def pass_user(
 
     logger.info(f"User {uid} passed on User {target_user_id}")
     return {"message": "User passed on successfully"}
+
+
+@router.get("/get_matches")
+async def get_matches(
+    current_user: Annotated[User, Depends(ensure_email_verified)],
+    db: Annotated[Session, Depends(get_db)],
+):
+    uid = current_user.id
+    Reverse = aliased(Match)
+
+    try:
+        matches = db.scalars(
+            select(Match)
+            .where(
+                Match.user_id == uid,
+                Match.is_like.is_(True),
+                exists().where(
+                    Reverse.user_id == Match.target_user_id,
+                    Reverse.target_user_id == uid,
+                    Reverse.is_like.is_(True),
+                ),
+            )
+            .options(
+                joinedload(Match.target_user).options(
+                    joinedload(User.profile),
+                    joinedload(User.survey),
+                )
+            )
+        )
+
+        matched_users = [
+            {
+                "uid": m.target_user_id,
+                "profile": m.target_user.profile,
+                "survey": m.target_user.survey,
+            }
+            for m in matches
+        ]
+
+        logger.info(f"User {uid} fetched their matches")
+        return {"matches": matched_users}
+    except SQLAlchemyError as e:
+        logger.error(f"Database error fetching matches for user {uid}: {e!s}")
+        raise InternalServerError("Database error fetching matches")
+    except Exception:
+        logger.exception(f"Unexpected error fetching matches for user {uid}")
+        raise InternalServerError("Unexpected error fetching matches")

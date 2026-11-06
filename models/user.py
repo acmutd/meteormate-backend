@@ -2,10 +2,9 @@
 # ACM MeteorMate | All Rights Reserved
 
 import enum
-from typing import Optional, Literal
 
-from pydantic import BaseModel, EmailStr
-from sqlalchemy import Column, Boolean, DateTime, Text, func, Enum as SQLEnum
+from sqlalchemy import Boolean, Column, DateTime, Text, func
+from sqlalchemy import Enum as SQLEnum
 from sqlalchemy.orm import relationship
 
 from database import ORMBase
@@ -25,13 +24,20 @@ class User(ORMBase):
     email = Column(Text, unique=True, index=True)
 
     # behind-the-scenes stuff
-    is_active = Column(Boolean, nullable=False, server_default='true', default=True)
-    pending_deletion = Column(Boolean, nullable=False, server_default='false', default=False)
-    is_banned = Column(Boolean, nullable=False, server_default='false', default=False)
+    is_active = Column(Boolean, nullable=False, server_default="true", default=True)
+    pending_deletion = Column(
+        Boolean, nullable=False, server_default="false", default=False
+    )
+    is_banned = Column(Boolean, nullable=False, server_default="false", default=False)
 
-    created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
+    created_at = Column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
     updated_at = Column(
-        DateTime(timezone=True), nullable=False, server_default=func.now(), onupdate=func.now()
+        DateTime(timezone=True),
+        nullable=False,
+        server_default=func.now(),
+        onupdate=func.now(),
     )
     inactivity_notification_stage = Column(
         SQLEnum(
@@ -47,5 +53,14 @@ class User(ORMBase):
         "Survey", back_populates="user", uselist=False, cascade="all, delete-orphan"
     )
     profile = relationship(
-        "UserProfile", back_populates="user", uselist=False, cascade="all, delete-orphan"
+        "UserProfile",
+        back_populates="user",
+        uselist=False,
+        cascade="all, delete-orphan",
+    )
+    matches_sent = relationship(
+        "Match",
+        foreign_keys="Match.user_id",
+        cascade="all, delete-orphan",
+        back_populates="user",
     )
