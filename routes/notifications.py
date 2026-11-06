@@ -5,6 +5,7 @@ import logging
 from typing import Annotated
 
 from fastapi import APIRouter, Depends
+from sqlalchemy import select, update
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
@@ -26,13 +27,12 @@ async def get_user_notifications(
     db: Annotated[Session, Depends(get_db)],
 ):
     try:
-        notifications = (
-            db.query(Notifications)
-            .filter(
+        notifications = db.execute(
+            select(Notifications).where(
                 Notifications.user_id == current_user.id, Notifications.seen == False
             )
-            .all()
-        )
+        ).all()
+
         logger.info(f"User {current_user.id} fetched notifications")
         return {"data": notifications}
     except SQLAlchemyError as e:
@@ -49,27 +49,31 @@ async def get_user_notifications(
 
 @router.post("/mark_notifications_seen")
 async def mark_notifications_seen(
-    notification_ids: NotificationsMarkSeenBody,
+    body: NotificationsMarkSeenBody,
     current_user: Annotated[User, Depends(ensure_email_verified)],
     db: Annotated[Session, Depends(get_db)],
 ):
     try:
-        notifications = (
-            db.query(Notifications)
-            .filter(
-                Notifications.user_id == current_user.id, Notifications.seen == False
+        result = db.execute(
+            update(Notifications)
+            .where(
+                Notifications.user_id == current_user.id,
+                Notifications.seen == False,
+                Notifications.id.in_(body.notification_ids),
             )
-            .all()
+            .values(seen=True)
         )
-        for notification in notifications:
-            if notification.id in notification_ids.notification_ids:
-                notification.seen = True
 
-        commit_or_raise(db)
+        commit_or_raise(
+            db,
+            logger,
+            resource="notifications",
+            uid=current_user.id,
+            action="mark seen",
+        )
+
         logger.info(f"User {current_user.id} marked notifications as seen")
-        return {
-            "message": f"Notifications marked {len(notification_ids.notification_ids)} as seen"
-        }
+        return {"message": f"{result.rowcount} notifications marked as seen"}
     except SQLAlchemyError as e:
         logger.error(
             f"Database error marking notifications as seen for user {current_user.id}: {e!s}"
