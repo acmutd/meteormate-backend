@@ -6,8 +6,9 @@ import logging
 from typing import Annotated
 
 from fastapi import APIRouter, Depends
+from sqlalchemy import exists, select
 from sqlalchemy.exc import SQLAlchemyError
-from sqlalchemy.orm import Session, joinedload
+from sqlalchemy.orm import Session, aliased, joinedload
 
 from database import commit_or_raise, get_db
 from models.matches import Match
@@ -73,15 +74,13 @@ async def like_user(
 
     db.refresh(new_match)
 
-    reciprocal_match = (
-        db.query(Match)
-        .filter(
+    reciprocal_match = db.execute(
+        select(Match).where(
             Match.user_id == target_user_id,
             Match.target_user_id == uid,
             Match.is_like == True,
         )
-        .first()
-    )
+    ).scalar_one_or_none()
 
     logger.info(f"User {uid} liked User {target_user_id}")
     return {"message": "User liked successfully", "mutual_like": bool(reciprocal_match)}
@@ -115,27 +114,27 @@ async def get_matches(
     db: Annotated[Session, Depends(get_db)],
 ):
     uid = current_user.id
+    Reverse = aliased(Match)
 
     try:
-        likes = (
-            db.query(Match)
-            .options(
-                joinedload(Match.target_user).joinedload(User.profile),
-                joinedload(Match.target_user).joinedload(User.survey),
-            )
-            .filter(Match.user_id == uid, Match.is_like.is_(True))
-            .all()
-        )
-        liked_ids = [m.target_user_id for m in likes]
-
-        mutual_ids = {
-            row.user_id
-            for row in db.query(Match.user_id).filter(
-                Match.user_id.in_(liked_ids),
-                Match.target_user_id == uid,
+        matches = db.scalars(
+            select(Match)
+            .where(
+                Match.user_id == uid,
                 Match.is_like.is_(True),
+                exists().where(
+                    Reverse.user_id == Match.target_user_id,
+                    Reverse.target_user_id == uid,
+                    Reverse.is_like.is_(True),
+                ),
             )
-        }
+            .options(
+                joinedload(Match.target_user).options(
+                    joinedload(User.profile),
+                    joinedload(User.survey),
+                )
+            )
+        )
 
         matched_users = [
             {
@@ -143,8 +142,7 @@ async def get_matches(
                 "profile": m.target_user.profile,
                 "survey": m.target_user.survey,
             }
-            for m in likes
-            if m.target_user_id in mutual_ids
+            for m in matches
         ]
 
         logger.info(f"User {uid} fetched their matches")
