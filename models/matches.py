@@ -1,20 +1,33 @@
 # Created by Ryan Polasky | 7/12/25
 # ACM MeteorMate | All Rights Reserved
 
-from sqlalchemy import Column, Text, Boolean, DateTime, ForeignKey, Integer
-from sqlalchemy.orm import relationship
+from datetime import datetime
+from typing import TYPE_CHECKING
+
+from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, Text
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.sql import func
+
 from database import ORMBase
+
+if TYPE_CHECKING:
+    from models.user import User
 
 
 class Match(ORMBase):
     __tablename__ = "matches"
 
-    id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Text, ForeignKey("users.id"))
-    target_user_id = Column(Text, ForeignKey("users.id"))
-    is_like = Column(Boolean)  # true for like, false for pass
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    user_id: Mapped[str] = mapped_column(
+        Text, ForeignKey("users.id", ondelete="CASCADE")
+    )
+    target_user_id: Mapped[str] = mapped_column(
+        Text, ForeignKey("users.id", ondelete="CASCADE")
+    )
+    is_like: Mapped[bool] = mapped_column(Boolean)  # true for like, false for pass
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
 
-    user = relationship("User", foreign_keys=[user_id])
-    target_user = relationship("User", foreign_keys=[target_user_id])
+    user: Mapped['User'] = relationship("User", foreign_keys=[user_id])
+    target_user: Mapped['User'] = relationship("User", foreign_keys=[target_user_id])
