@@ -27,8 +27,8 @@ class User(ORMBase):
     __tablename__ = "users"
 
     id: Mapped[str] = mapped_column(Text, primary_key=True, index=True)
-    utd_id: Mapped[str | None] = mapped_column(Text, unique=True, index=True)
-    email: Mapped[str | None] = mapped_column(Text, unique=True, index=True)
+    utd_id: Mapped[str] = mapped_column(Text, unique=True, index=True)
+    email: Mapped[str] = mapped_column(Text, unique=True, index=True)
 
     # behind-the-scenes stuff
     is_active: Mapped[bool] = mapped_column(

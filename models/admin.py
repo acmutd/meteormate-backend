@@ -1,6 +1,11 @@
+# Created by Atharva Mishra | <unknown>
+# ACM MeteorMate | All Rights Reserved
+
 from datetime import datetime
+
 from sqlalchemy import DateTime, Text, func
-from sqlalchemy.orm import mapped_column, Mapped
+from sqlalchemy.orm import Mapped, mapped_column
+
 from database import ORMBase
 
 

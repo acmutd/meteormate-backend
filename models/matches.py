@@ -1,4 +1,5 @@
 # Created by Ryan Polasky | 7/12/25
+# Updated by Atharva Mishra
 # ACM MeteorMate | All Rights Reserved
 
 from datetime import datetime
@@ -29,5 +30,5 @@ class Match(ORMBase):
         DateTime(timezone=True), server_default=func.now()
     )
 
-    user: Mapped['User'] = relationship("User", foreign_keys=[user_id])
-    target_user: Mapped['User'] = relationship("User", foreign_keys=[target_user_id])
+    user: Mapped["User"] = relationship("User", foreign_keys=[user_id])
+    target_user: Mapped["User"] = relationship("User", foreign_keys=[target_user_id])

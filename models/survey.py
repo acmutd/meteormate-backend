@@ -1,11 +1,13 @@
 # Created by Ryan Polasky | 7/12/25
+# Updated by Atharva Mishra
 # ACM MeteorMate | All Rights Reserved
 
 import enum
+from datetime import date, datetime
+from typing import TYPE_CHECKING
 
 from sqlalchemy import (
     Boolean,
-    Column,
     Date,
     DateTime,
     ForeignKey,
@@ -13,16 +15,15 @@ from sqlalchemy import (
     Text,
     text,
 )
-from sqlalchemy import Enum as SAEnum
-from sqlalchemy.dialects.postgresql import ARRAY, JSONB
-from sqlalchemy.orm import relationship
+from sqlalchemy import Enum as SQLEnum
+from sqlalchemy.dialects.postgresql import ARRAY
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.sql import func
 
-from database import ORMBase
+from database import ORMBase, enum_values
 
-
-def mm_enum(enum_cls: type[enum.Enum], name: str) -> SAEnum:
-    return SAEnum(enum_cls, name=name, values_callable=lambda e: [x.value for x in e])
+if TYPE_CHECKING:
+    from models.user import User
 
 
 # Shared housing enums
@@ -108,7 +109,7 @@ class HaveLeaseLengthEnum(str, enum.Enum):
 class Survey(ORMBase):
     __tablename__ = "surveys"
 
-    user_id = Column(
+    user_id: Mapped[str] = mapped_column(
         Text,
         ForeignKey("users.id", ondelete="CASCADE"),
         primary_key=True,
@@ -116,71 +117,139 @@ class Survey(ORMBase):
     )
 
     # Core housing fields
-    housing_intent = Column(mm_enum(HousingIntentEnum, "housing_intent_enum"), nullable=True)
+    housing_intent: Mapped[HousingIntentEnum] = mapped_column(
+        SQLEnum(
+            HousingIntentEnum, name="housing_intent_enum", values_callable=enum_values
+        ),
+        nullable=True,
+    )
 
     # Sliders (rent/budget)
-    budget_min = Column(Integer, nullable=True)
-    budget_max = Column(Integer, nullable=True)
+    budget_min: Mapped[int] = mapped_column(Integer, nullable=True)
+    budget_max: Mapped[int] = mapped_column(Integer, nullable=True)
 
-    move_in_date = Column(Date, nullable=True)
+    move_in_date: Mapped[date] = mapped_column(Date, nullable=True)
 
     # Wake/Clean/Noise
-    wake_time = Column(mm_enum(WakeTimeEnum, "wake_time_enum"), nullable=True)
-    cleanliness = Column(mm_enum(CleanlinessEnum, "cleanliness_enum"), nullable=True)
-    noise_tolerance = Column(mm_enum(NoiseToleranceEnum, "noise_tolerance_enum"), nullable=True)
+    wake_time: Mapped[WakeTimeEnum] = mapped_column(
+        SQLEnum(WakeTimeEnum, name="wake_time_enum", values_callable=enum_values),
+        nullable=True,
+    )
+    cleanliness: Mapped[CleanlinessEnum] = mapped_column(
+        SQLEnum(CleanlinessEnum, name="cleanliness_enum", values_callable=enum_values),
+        nullable=True,
+    )
+    noise_tolerance: Mapped[NoiseToleranceEnum] = mapped_column(
+        SQLEnum(
+            NoiseToleranceEnum, name="noise_tolerance_enum", values_callable=enum_values
+        ),
+        nullable=True,
+    )
 
     # Interests
-    interests = Column(ARRAY(Text), nullable=False, server_default="{}")
+    interests: Mapped[list[str]] = mapped_column(
+        ARRAY(Text), nullable=False, server_default="{}"
+    )
 
     # Dealbreakers
-    dealbreakers = Column(
-        ARRAY(mm_enum(DealbreakerEnum, "dealbreaker_enum")),
+    dealbreakers: Mapped[DealbreakerEnum] = mapped_column(
+        ARRAY(
+            SQLEnum(
+                DealbreakerEnum, name="dealbreaker_enum", values_callable=enum_values
+            )
+        ),
         nullable=False,
         server_default="{}",
     )
 
     # Lifestyle / Personality
-    cooking_frequency = Column(
-        mm_enum(CookingFrequencyEnum, "cooking_frequency_enum"), nullable=True
+    cooking_frequency: Mapped[CookingFrequencyEnum] = mapped_column(
+        SQLEnum(
+            CookingFrequencyEnum,
+            name="cooking_frequency_enum",
+            values_callable=enum_values,
+        ),
+        nullable=True,
     )
-    pet_preference = Column(mm_enum(PetPreferenceEnum, "pet_preference_enum"), nullable=True)
-    guests_frequency = Column(mm_enum(GuestsFrequencyEnum, "guests_frequency_enum"), nullable=True)
-    roommate_closeness = Column(
-        mm_enum(RoommateClosenessEnum, "roommate_closeness_enum"), nullable=True
+    pet_preference: Mapped[PetPreferenceEnum] = mapped_column(
+        SQLEnum(
+            PetPreferenceEnum, name="pet_preference_enum", values_callable=enum_values
+        ),
+        nullable=True,
+    )
+    guests_frequency: Mapped[GuestsFrequencyEnum] = mapped_column(
+        SQLEnum(
+            GuestsFrequencyEnum,
+            name="guests_frequency_enum",
+            values_callable=enum_values,
+        ),
+        nullable=True,
+    )
+    roommate_closeness: Mapped[RoommateClosenessEnum] = mapped_column(
+        SQLEnum(
+            RoommateClosenessEnum,
+            name="roommate_closeness_enum",
+            values_callable=enum_values,
+        ),
+        nullable=True,
     )
 
     # On-campus flow
-    on_campus_locations = Column(
-        ARRAY(mm_enum(OnCampusLocationEnum, "on_campus_location_enum")),
+    on_campus_locations: Mapped[OnCampusLocationEnum] = mapped_column(
+        ARRAY(
+            SQLEnum(
+                OnCampusLocationEnum,
+                name="on_campus_location_enum",
+                values_callable=enum_values,
+            )
+        ),
         nullable=False,
         server_default="{}",
     )
 
     # asked on on-campus page
-    honors = Column(Boolean, nullable=True)
+    honors: Mapped[bool] = mapped_column(Boolean, nullable=True)
 
-    llc_interest = Column(Boolean, nullable=True)
+    llc_interest: Mapped[bool] = mapped_column(Boolean, nullable=True)
 
     # UV/CC/Northside stuff
-    num_roommates = Column(mm_enum(NumRoommatesEnum, "num_roommates_enum"), nullable=True)
-
-    # Off-campus lease flow
-    have_lease = Column(Boolean, nullable=True)
-    have_lease_length = Column(
-        mm_enum(HaveLeaseLengthEnum, "have_lease_length_enum"), nullable=True
+    num_roommates: Mapped[NumRoommatesEnum] = mapped_column(
+        SQLEnum(
+            NumRoommatesEnum, name="num_roommates_enum", values_callable=enum_values
+        ),
+        nullable=True,
     )
 
-    encoded_answers = Column(ARRAY(Integer), nullable=False, server_default="{}")
+    # Off-campus lease flow
+    have_lease: Mapped[bool] = mapped_column(Boolean, nullable=True)
+    have_lease_length: Mapped[HaveLeaseLengthEnum] = mapped_column(
+        SQLEnum(
+            HaveLeaseLengthEnum,
+            name="have_lease_length_enum",
+            values_callable=enum_values,
+        ),
+        nullable=True,
+    )
 
-    created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
-    updated_at = Column(
+    encoded_answers: Mapped[list[int]] = mapped_column(
+        ARRAY(Integer), nullable=False, server_default="{}"
+    )
+
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+    updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         nullable=False,
         server_default=func.now(),
         onupdate=func.now(),
     )
 
-    smoke_vape = Column(Boolean, nullable=False, server_default=text("false"))
-    drink = Column(Boolean, nullable=False, server_default=text("false"))
+    smoke_vape: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, server_default=text("false")
+    )
+    drink: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, server_default=text("false")
+    )
 
-    user = relationship("User", back_populates="survey", uselist=False)
+    user: Mapped["User"] = relationship("User", back_populates="survey", uselist=False)
