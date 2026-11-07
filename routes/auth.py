@@ -3,12 +3,13 @@
 # ACM MeteorMate | All Rights Reserved
 
 import logging
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Annotated
 
 from fastapi import APIRouter, Depends
 from firebase_admin import auth
 from firebase_admin.exceptions import FirebaseError
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from config import settings
@@ -30,17 +31,19 @@ router = APIRouter()
     "/register", response_model=UserResponse, dependencies=[sensitive_updates_limiter]
 )
 async def register_user(user_data: UserCreate, db: Annotated[Session, Depends(get_db)]):
-    if (
-        db.query(User)
-        .filter((User.utd_id == user_data.utd_id) | (User.email == user_data.email))
-        .first()
-    ):
+    if db.execute(
+        select(User).where(
+            (User.utd_id == user_data.utd_id) | (User.email == user_data.email)
+        )
+    ).scalar_one_or_none():
         logger.warning(
             "user tried to create an account with an existing email/Net ID in DB"
         )
         raise Conflict("Account already exists")
 
-    if db.query(Banlist).filter(Banlist.net_id == user_data.utd_id).first():
+    if db.execute(
+        select(Banlist).where(Banlist.net_id == user_data.utd_id)
+    ).scalar_one_or_none():
         logger.warning(
             f"User with Net ID {user_data.utd_id} attempted to register but is banned"
         )
@@ -145,7 +148,7 @@ def activity_ping(
     current_user: Annotated[User, Depends(ensure_email_verified)],
     db: Annotated[Session, Depends(get_db)],
 ):
-    current_user.updated_at = datetime.now(timezone.utc)
+    current_user.updated_at = datetime.now(UTC)
     current_user.inactivity_notification_stage = None
 
     commit_or_raise(db, logger, resource="user", uid=current_user.id, action="update")

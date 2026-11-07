@@ -6,6 +6,7 @@ from typing import Annotated
 from urllib.parse import unquote, urlparse
 
 from fastapi import APIRouter, Depends
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from database import commit_or_raise, get_db
@@ -105,12 +106,14 @@ async def update_user_profile(
     "/get/{uid}", response_model=UserProfileResponse, dependencies=[get_rate_limiter]
 )
 async def get_user_profile(uid: str, db: Annotated[Session, Depends(get_db)]):
-    profile = db.query(UserProfile).filter(UserProfile.user_id == uid).first()
+    profile = db.execute(
+        select(UserProfile).where(UserProfile.user_id == uid)
+    ).scalar_one_or_none()
     if not profile:
         logger.warning(f"profile not found for User {uid}")
         raise NotFound("User profile")
 
-    if db.query(Banlist).filter(Banlist.net_id == uid).first():
+    if db.execute(select(Banlist).where(Banlist.net_id == uid)).scalar_one_or_none():
         logger.warning(
             f"User with Net ID {uid} attempted to access profile but is banned"
         )
