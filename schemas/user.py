@@ -1,8 +1,8 @@
 # Created by Ryan Polasky | 7/12/25
 # ACM MeteorMate | All Rights Reserved
 
-from typing import Optional
 from datetime import datetime
+
 from pydantic import BaseModel, computed_field, field_validator
 
 from schemas.survey import SurveyResponse
@@ -30,8 +30,8 @@ class UserResponse(BaseModel):
     email: str
     created_at: datetime
 
-    survey: Optional[SurveyResponse] = None
-    profile: Optional[UserProfileResponse] = None
+    survey: SurveyResponse | None = None
+    profile: UserProfileResponse | None = None
 
     @computed_field
     @property

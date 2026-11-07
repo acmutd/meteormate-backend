@@ -2,12 +2,10 @@
 # Updated by Atharva Mishra
 # ACM MeteorMate | All Rights Reserved
 
-import base64
-import binascii
-from better_profanity import profanity
 from datetime import datetime
-from typing import List, Literal, Optional
+from typing import Literal
 
+from better_profanity import profanity
 from pydantic import BaseModel, field_validator, model_validator
 
 from config import settings
@@ -20,27 +18,31 @@ School = Literal["AHT", "BBS", "EPPS", "ECS", "IDS", "JSOM", "NSM"]
 
 def validate_name(name: str, min_len: int, max_len: int, position: str) -> str:
     if not (min_len <= len(name) <= max_len):
-        raise BadRequest(f"{position} name must be between {min_len} and {max_len} characters")
+        raise BadRequest(
+            f"{position} name must be between {min_len} and {max_len} characters"
+        )
 
     if not name.isalpha():
-        raise BadRequest(f"{position} name cannot contain any numbers or special characters")
+        raise BadRequest(
+            f"{position} name cannot contain any numbers or special characters"
+        )
 
     return name
 
 
 class UserProfileBase(BaseModel):
-    gender: Optional[Gender] = None
-    major: Optional[str] = None
-    school: Optional[School] = None
-    classification: Optional[Classification] = None
-    bio: Optional[str] = None
-    profile_picture_url: Optional[List[str]] = None
-    first_name: Optional[str] = None
-    last_name: Optional[str] = None
-    dob: Optional[datetime] = None
-    age: Optional[int] = None
-    match_notification: Optional[bool] = True
-    promotional_notification: Optional[bool] = False
+    gender: Gender | None = None
+    major: str | None = None
+    school: School | None = None
+    classification: Classification | None = None
+    bio: str | None = None
+    profile_picture_url: list[str] | None = None
+    first_name: str | None = None
+    last_name: str | None = None
+    dob: datetime | None = None
+    age: int | None = None
+    match_notification: bool | None = True
+    promotional_notification: bool | None = False
 
     class Config:
         from_attributes = True
@@ -51,7 +53,9 @@ class UserProfileBase(BaseModel):
         if v is None:
             return v
 
-        return validate_name(v, settings.FIRST_NAME_MIN_LEN, settings.FIRST_NAME_MAX_LEN, "first")
+        return validate_name(
+            v, settings.FIRST_NAME_MIN_LEN, settings.FIRST_NAME_MAX_LEN, "first"
+        )
 
     @field_validator("last_name")
     @classmethod
@@ -59,7 +63,9 @@ class UserProfileBase(BaseModel):
         if v is None:
             return v
 
-        return validate_name(v, settings.LAST_NAME_MIN_LEN, settings.LAST_NAME_MAX_LEN, "last")
+        return validate_name(
+            v, settings.LAST_NAME_MIN_LEN, settings.LAST_NAME_MAX_LEN, "last"
+        )
 
     @field_validator("dob")
     @classmethod
@@ -80,7 +86,7 @@ class UserProfileBase(BaseModel):
 
         if profanity.contains_profanity(v):
             raise BadRequest("Bio cannot contain profanity")
-        
+
         return v
 
     @model_validator(mode="after")
@@ -96,7 +102,9 @@ class UserProfileBase(BaseModel):
         today = datetime.now()
         age = today.year - dob.year - ((today.month, today.day) < (dob.month, dob.day))
         if not (settings.MIN_AGE <= age <= settings.MAX_AGE):
-            raise BadRequest(f"Age must be between {settings.MIN_AGE} and {settings.MAX_AGE} years")
+            raise BadRequest(
+                f"Age must be between {settings.MIN_AGE} and {settings.MAX_AGE} years"
+            )
 
         values.age = age
 
@@ -131,7 +139,7 @@ class UserProfileResponse(BaseModel):
     last_name: str
     age: int
     dob: datetime
-    profile_picture_url: List[str]
+    profile_picture_url: list[str]
     bio: str
     match_notification: bool
     promotional_notification: bool
@@ -141,25 +149,30 @@ class UserProfileResponse(BaseModel):
 
 
 class UserProfileDeletePictures(BaseModel):
-    profile_picture_url: List[str]
+    profile_picture_url: list[str]
 
     @field_validator("profile_picture_url")
     @classmethod
     def validate_picture_count(cls, v):
         if len(v) == 0:
-            raise BadRequest("At least one profile picture must be provided for deletion")
+            raise BadRequest(
+                "At least one profile picture must be provided for deletion"
+            )
 
         return v
 
 
 class UserUpdateNotifications(BaseModel):
-    match_notification: Optional[bool] = None
-    promotional_notification: Optional[bool] = None
+    match_notification: bool | None = None
+    promotional_notification: bool | None = None
 
     @model_validator(mode="before")
     @classmethod
     def validate_atleast_one(cls, values):
-        if (values.get("match_notification") is None and values.get("promotional_notification") is None):
+        if (
+            values.get("match_notification") is None
+            and values.get("promotional_notification") is None
+        ):
             raise BadRequest("At least one notification preference must be provided")
 
         return values
